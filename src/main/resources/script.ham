@@ -1,0 +1,8 @@
+
+
+
+max(a, b) = ite(a < b, b, a)
+
+
+
+main = max 1 2

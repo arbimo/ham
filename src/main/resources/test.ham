@@ -1,0 +1,21 @@
+
+
+constant ten: Real = 10;
+
+fluent x : Real;
+fluent y : Real;
+control u : Real;
+
+dynamics {
+  dot(x) = u + ten;
+  dot(y) = u
+}
+
+
+
+subject_to {
+  u < 10;
+  0 < u;
+  x == y + ten;
+
+}
