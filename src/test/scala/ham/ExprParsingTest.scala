@@ -3,6 +3,7 @@ package ham
 import fastparse.Parsed.{Failure, Success}
 import minitest._
 import fastparse._
+import ham.parsing.expr.OperatorClimbing
 
 object ExprParsingTest extends SimpleTestSuite {
 

@@ -1,6 +1,4 @@
-package ham.model
-
-
+package ham.parsing
 
 sealed trait AST
 

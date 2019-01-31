@@ -1,6 +1,7 @@
-package ham.script
+package ham.parsing
 
 import ham.expr.{BuiltIn, ModuleID, Type}
+import ham.lang._
 import minitest._
 
 object ParseTest extends SimpleTestSuite {

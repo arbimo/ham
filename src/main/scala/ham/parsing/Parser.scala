@@ -1,11 +1,11 @@
-package ham.script
+package ham.parsing
 
 
 import fastparse._
 import JavaWhitespace._
 import fastparse.Parsed.{Failure, Success}
-import ham.OperatorClimbing
-import ham.model._
+import ham.parsing.expr.OperatorClimbing
+
 
 object Parser {
 

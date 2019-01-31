@@ -27,12 +27,14 @@ final case class Literal(value: Any, tpe: Type) extends Expr
 
 
 object Expr {
-  import ham.model._
+  import ham.hybrid._
 
   object types {
     val Real = Type.primitive("Real")
   }
 
+
+  import ham.parsing._
 
 
   def fromAST(ast: AST, lookup: String => Option[Id]): Attempt[Expr] =
