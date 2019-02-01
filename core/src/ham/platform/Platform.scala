@@ -13,6 +13,8 @@ trait Platform {
 
 object Platform {
 
+  val default = new Default(Paths.get("").toAbsolutePath)
+
 
   class Default(wd: Path) extends Platform {
     override def readModuleSource(m: ModuleID): Attempt[String] = {

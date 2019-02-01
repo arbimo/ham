@@ -58,14 +58,12 @@ class Module(name: String, imports: Seq[Import], private val expressions: Map[St
         typeOfExternal(id)
 
     val isFail = processingOrder.flatMap(order => {
-      println(order)
       order.traverse(sym => {
         assert(!types.contains(sym))
         for {
           expr <- definition(sym)
           tpe <- Typer.typeOf(expr, knownTypes)
         } yield {
-          println(s"$sym : $tpe")
           types.update(sym, tpe)
           ()
         }

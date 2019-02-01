@@ -56,10 +56,6 @@ object Interpreter {
       case x: Literal =>
         x
     }
-     println(e)
-     println(res)
-     println()
-
     res
   }
 
