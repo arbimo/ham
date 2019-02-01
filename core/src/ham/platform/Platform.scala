@@ -13,7 +13,9 @@ trait Platform {
 
 object Platform {
 
-  val default = new Default(Paths.get("").toAbsolutePath)
+  // must be a def and not a val so that Path.get is not evaluated at static initialization.
+  // this occurs when compiling ahead of time with GraalVM
+  def default = new Default(Paths.get("").toAbsolutePath)
 
 
   class Default(wd: Path) extends Platform {
@@ -29,11 +31,5 @@ object Platform {
     }
   }
 
-//  object FromResources extends Platform {
-//
-//    override def readModuleSource(m: ModuleID): Attempt[String] = {
-//      getClass.getResource("tests").
-//    }
-//  }
 
 }

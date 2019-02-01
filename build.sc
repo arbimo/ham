@@ -19,15 +19,14 @@ trait HamModule extends ScalaModule {
   def scalacOptions = Seq(
     "-Ydelambdafy:inline", "-Ypartial-unification"
     )
+
+  override def compileIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
+  override def scalacPluginIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
 }
 
 
 object core extends HamModule {
   override def ivyDeps = Agg(cats, fastparse)
-
-  override def compileIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
-
-  override def scalacPluginIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
 
   object tests extends Tests { 
     def ivyDeps = Agg(minitest)
@@ -39,9 +38,7 @@ object script extends HamModule {
   override def moduleDeps = Seq( core )
   override def ivyDeps = Agg(cats, fastparse)
 
-  override def compileIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
-
-  override def scalacPluginIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
+  override def mainClass = Some("ham.script.Main")
 
   object tests extends Tests {
     def ivyDeps = Agg(minitest)

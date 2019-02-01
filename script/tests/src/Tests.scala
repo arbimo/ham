@@ -9,17 +9,22 @@ import ham.expr.ModuleID
 import ham.interpreter.Interpreter
 import ham.parsing.Decl
 import ham.prelude.Prelude
-import ham.script.Parser
 
-object Tests extends App {
+import minitest._
 
-  val parser: String => Attempt[List[Decl]] = Parser.declarations(_).leftMap(ParseError(_))
+object Tests extends SimpleTestSuite {
 
-  println("\n======= Valid tests =======")
-  forEachHamFilesIn("/tests/positive", checkValid)
+  val parser: String => Attempt[List[Decl]] = Parser.declarations(_).leftMap(ParseError)
 
-  println("\n======= Invalid tests =======")
-  forEachHamFilesIn("/tests/negative", checkInvalid)
+  test("valid") {
+    println("\n======= Valid tests =======")
+    forEachHamFilesIn("/tests/positive", checkValid)
+  }
+
+  test("invalid") {
+    println("\n======= Invalid tests =======")
+    forEachHamFilesIn("/tests/negative", checkInvalid)
+  }
 
 
   def forEachHamFilesIn(dir: String, run: Path => Unit): Unit = {
@@ -53,10 +58,10 @@ object Tests extends App {
                   case Right(res) => println(s"main = $res")
                   case Left(err) =>
                     System.err.println(s"Error while evaluating main: ${err.msg}")
-                    err.printStackTrace()
+                    throw err
                 }
               case Left(err) =>
-                System.out.println("Could not find definition of main method")
+                sys.error("Could not find definition of main method")
                 System.exit(1)
             }
 
@@ -66,8 +71,7 @@ object Tests extends App {
         System.err.println(s"Failed to type check: $p")
         System.err.println(content)
         System.err.println(err)
-        err.printStackTrace()
-        System.exit(1)
+        throw err
     }
   }
 

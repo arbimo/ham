@@ -1,21 +1,26 @@
 
 
-constant ten: Real = 10;
-
 fluent x : Real;
 fluent y : Real;
-control u : Real;
+control ux : Real;
+control uy: Real;
 
 dynamics {
-  dot(x) = u + ten;
-  dot(y) = u
+  dot(x) = ux;
+  dot(y) = uy;
 }
 
-
-
 subject_to {
-  u < 10;
-  0 < u;
-  x == y + ten;
+  abs(ux) <= 10;
+  abs(uy) <= 10;
+}
 
+initially {
+  x = 0;
+  y = 0;
+}
+
+finally {
+  x == 10;
+  y == 10;
 }
