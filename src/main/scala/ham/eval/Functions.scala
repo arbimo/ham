@@ -2,6 +2,7 @@ package ham.eval
 
 object Functions {
 
+  val Add: Double => Double => Double = a => b => a + b
   val Mul: Double => Double => Double = a => b => a * b
   val Div: Double => Double => Double = a => b => a / b
 
@@ -16,6 +17,7 @@ object Functions {
 
 
   private def funUnsafe(name: String): Any = name match {
+    case "real.add" => Add
     case "*" => Mul
     case "/" => Div
     case "abs" => Abs

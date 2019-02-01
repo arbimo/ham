@@ -27,4 +27,11 @@ object Platform {
     }
   }
 
+//  object FromResources extends Platform {
+//
+//    override def readModuleSource(m: ModuleID): Attempt[String] = {
+//      getClass.getResource("tests").
+//    }
+//  }
+
 }

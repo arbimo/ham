@@ -1,5 +1,6 @@
 package ham.expr
 
+import cats.data.NonEmptyList
 import ham.errors.Attempt
 
 import scala.reflect.ClassTag
@@ -17,17 +18,23 @@ case class Id(module: ModuleID,  name: String) {
 
 abstract class Expr
 
-final case class App(fun: Expr, arg: Expr) extends Expr
+final case class App(fun: Expr, arg: Expr) extends Expr {
+  override def toString: String = s"($fun $arg)"
+}
 final case class Fun(params: List[String], body: Expr) extends Expr
 final case class Var(pos: Int) extends Expr
-final case class Symbol(id: Id) extends Expr
+final case class Symbol(id: Id) extends Expr {
+  override def toString: String = id.local
+}
 final case class BuiltIn(name: String, tpe: Type) extends Expr
-final case class Literal(value: Any, tpe: Type) extends Expr
+final case class Literal(value: Any, tpe: Type) extends Expr {
+  override def toString: String = value.toString
+}
 
 
 
 object Expr {
-  import ham.hybrid._
+
 
   object types {
     val Real = Type.primitive("Real")

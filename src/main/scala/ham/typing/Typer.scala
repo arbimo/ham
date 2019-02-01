@@ -21,11 +21,11 @@ object Typer {
   def typeError(msg: String) = new Err(s"Type error: $msg")
 	def error(msg: String): Err = new Err(msg)
 
-  def typeOf(expr: Expr, ctx: Id => Attempt[Type]): Either[Err, Type] =
+  def typeOf(expr: Expr, ctx: Id => Attempt[Type]): Attempt[Type] =
     try {
       Right(analyse(expr, Env(ctx, Nil), Set.empty))
     } catch {
-      case e: Err => Left(e)
+      case e: Err => ham.errors.failure(s"Failed to type check $expr\nCause: ${e.msg}", cause = e)
     }
 
 

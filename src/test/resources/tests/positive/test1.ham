@@ -1,0 +1,16 @@
+
+gt(a, b) = a < b
+
+max(x, y) = ite(x < y, y, x)
+
+comp(a, b) = a < b + b
+
+implies(a, b) = not(a) || b
+
+x = true || false
+xor(a, b) = a && not(b) || not(a) && b
+
+add(a, b) = a + b
+
+
+main = 10 + add(20 , 5)

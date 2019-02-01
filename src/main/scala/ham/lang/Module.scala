@@ -12,6 +12,10 @@ import scala.collection.mutable
 class Module(name: String, imports: Seq[Import], private val expressions: Map[String, ham.expr.Expr]) {
   val id: ModuleID = ModuleID(name)
 
+  def mainFunction: Option[Id] =
+    if(expressions.contains("main")) Some(id / "main")
+    else None
+
   def symbolNameToId(name: String): Id = id / name
   lazy val symbols: Set[Id] = expressions.keySet.map(symbolNameToId)
   lazy val definitions: Map[Id, Expr] = expressions
@@ -30,10 +34,11 @@ class Module(name: String, imports: Seq[Import], private val expressions: Map[St
     case (k, v) => symbolNameToId(k) -> Expr.symbolOccurences(v)
   }
 
-  def topoOrder: Attempt[List[Id]] = Graph.topologicalOrder(
+  /** Order of symbols in the module such that a symbol does not depend on any other appearing later in the order */
+  def processingOrder: Attempt[List[Id]] = Graph.topologicalOrder(
     symbols,
     (id: Id) => dependencies(id).filter(_.module == this.id)) match {
-    case Right(order) => Right(order.toList)
+    case Right(order) => Right(order.reverse.toList)
     case Left(Graph.Cycle(nodes)) => Left(Typer.error(s"Cycle in symbols: ${nodes.mkString(", ")}"))
   }
 
@@ -52,13 +57,15 @@ class Module(name: String, imports: Seq[Import], private val expressions: Map[St
       else
         typeOfExternal(id)
 
-    val isFail = topoOrder.flatMap(order => {
+    val isFail = processingOrder.flatMap(order => {
+      println(order)
       order.traverse(sym => {
         assert(!types.contains(sym))
         for {
           expr <- definition(sym)
           tpe <- Typer.typeOf(expr, knownTypes)
         } yield {
+          println(s"$sym : $tpe")
           types.update(sym, tpe)
           ()
         }

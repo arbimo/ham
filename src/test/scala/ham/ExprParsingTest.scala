@@ -3,12 +3,15 @@ package ham
 import fastparse.Parsed.{Failure, Success}
 import minitest._
 import fastparse._
-import ham.parsing.expr.OperatorClimbing
+import ham.parsing.AST
+import ham.parsing.expr.LangParser
 
 object ExprParsingTest extends SimpleTestSuite {
+  import fastparse.SingleLineWhitespace._
+  def parser[_: P]: P[AST] = Pass ~ LangParser.default.expr ~ End
 
   def parses(str: String): Unit = {
-    fastparse.parse(str, OperatorClimbing.base.complete(_)) match {
+    fastparse.parse(str, parser(_)) match {
       case Success(value, index) => println("OK: " + value)
       case fail @ Failure(label, index, extra) =>
         println("KO: " + str)
@@ -16,7 +19,7 @@ object ExprParsingTest extends SimpleTestSuite {
         assert(false)
     }
   }
-  test("should be") {
+  test("should parse") {
     parses("plus(a, b)")
     parses("d + a")
     parses("plus(a + d, x)")
@@ -32,22 +35,4 @@ object ExprParsingTest extends SimpleTestSuite {
     assertEquals(2, 1 + 1)
   }
 
-  test("should not be") {
-    assert(1 + 1 != 3)
-  }
-
-  test("should throw") {
-    class DummyException extends RuntimeException("DUMMY")
-    def test(): String = throw new DummyException
-
-    intercept[DummyException] {
-      test()
-    }
-  }
-
-  test("test result of") {
-    assertResult("hello world") {
-      "hello" + " " + "world"
-    }
-  }
 }
