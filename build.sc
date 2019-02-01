@@ -1,4 +1,3 @@
-// build.sc
 import mill._
 import scalalib._
 import $ivy.`ch.epfl.scala::mill-bloop:1.2.5`
@@ -15,7 +14,7 @@ object deps {
 }
 import deps._
 
-trait Module extends ScalaModule {
+trait HamModule extends ScalaModule {
   def scalaVersion = "2.12.8"
   def scalacOptions = Seq(
     "-Ydelambdafy:inline", "-Ypartial-unification"
@@ -23,7 +22,7 @@ trait Module extends ScalaModule {
 }
 
 
-object core extends Module {
+object core extends HamModule {
   override def ivyDeps = Agg(cats, fastparse)
 
   override def compileIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
@@ -34,5 +33,23 @@ object core extends Module {
     def ivyDeps = Agg(minitest)
     def testFrameworks = Seq("minitest.runner.Framework")
   }
+}
 
+object script extends HamModule {
+  override def moduleDeps = Seq( core )
+  override def ivyDeps = Agg(cats, fastparse)
+
+  override def compileIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
+
+  override def scalacPluginIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
+
+  object tests extends Tests {
+    def ivyDeps = Agg(minitest)
+    def testFrameworks = Seq("minitest.runner.Framework")
+  }
+}
+
+object build extends Module {
+  // mill bloop.integrations.mil l.Bloop/install
+  def bloopInstall(ev: mill.eval.Evaluator) = T.command { bloop.integrations.mill.Bloop.install(ev) }
 }

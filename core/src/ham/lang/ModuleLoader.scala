@@ -2,6 +2,7 @@ package ham.lang
 
 import ham.errors._
 import ham.expr._
+import ham.parsing.Decl
 
 import scala.collection.mutable
 
@@ -46,9 +47,9 @@ class SimpleLoader(predef: List[Module], override val defaultImports: List[Impor
     module.typeCheck(typeOf).map(types => TypedModule(module, types))
   }
 
-  def loadFromSource(id: ModuleID, source: String): Attempt[TypedModule] = {
+  def loadFromSource(id: ModuleID, source: String, parser: String => Attempt[List[Decl]]): Attempt[TypedModule] = {
     for {
-      mod <- Module.parse(id.name, source, this)
+      mod <- Module.parse(id.name, source, parser, this)
       typed <- typeCheck(mod)
       _ <- load(typed)
     } yield typed

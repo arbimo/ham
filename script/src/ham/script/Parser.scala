@@ -1,5 +1,6 @@
-package ham.parsing
+package ham.script
 
+import ham.parsing._
 
 import fastparse._
 import JavaWhitespace._

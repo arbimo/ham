@@ -1,13 +1,19 @@
-package ham.integration
+package ham.script
 
 import java.nio.file.{Files, Path, Paths}
 
+import cats.implicits._
+
+import ham.errors.{Attempt, ParseError}
 import ham.expr.ModuleID
 import ham.interpreter.Interpreter
-import ham.parsing.ParseTest
+import ham.parsing.Decl
 import ham.prelude.Prelude
+import ham.script.Parser
 
 object Tests extends App {
+
+  val parser: String => Attempt[List[Decl]] = Parser.declarations(_).leftMap(ParseError(_))
 
   println("\n======= Valid tests =======")
   forEachHamFilesIn("/tests/positive", checkValid)
@@ -19,7 +25,7 @@ object Tests extends App {
   def forEachHamFilesIn(dir: String, run: Path => Unit): Unit = {
     val clazz = this.getClass
     val res = clazz.getResource(dir)
-    val uri = res    .toURI
+    val uri = res.toURI
     val path = Paths.get(uri)
     Files.list(path)
       .forEach(p => run(p))
@@ -31,7 +37,7 @@ object Tests extends App {
     val id = p.getFileName.toString.replaceAll(".ham", "")
     val content = Files.readAllLines(p).toArray().mkString("\n")
     val loader = Prelude.getLoader()
-    loader.loadFromSource(ModuleID(id), content) match {
+    loader.loadFromSource(ModuleID(id), content, parser) match {
       case Right(typed) =>
         println(s"Successfully typed $id")
         typed.types.foreach { case (k, v) => println(s"$k : $v") }
@@ -70,7 +76,7 @@ object Tests extends App {
     val id = p.getFileName.toString.replaceAll(".ham", "")
     val content = Files.readAllLines(p).toArray().mkString("\n")
     val loader = Prelude.getLoader()
-    loader.loadFromSource(ModuleID(id), content) match {
+    loader.loadFromSource(ModuleID(id), content, parser) match {
       case Right(typed) =>
         System.err.println(s"Error: successfully typed $p")
         System.err.println(content)

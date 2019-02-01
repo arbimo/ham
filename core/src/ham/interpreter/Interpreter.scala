@@ -18,7 +18,7 @@ object Interpreter {
       }
     }
     Try(eval(e, Nil, unsafeLookup)) match {
-      case Success(res) => ham.errors.success(e)
+      case Success(res) => ham.errors.success(res)
       case Failure(err: ham.errors.Err) => Left(err)
       case Failure(e) => throw e // this a crash do not pretend we know how to handle it
     }

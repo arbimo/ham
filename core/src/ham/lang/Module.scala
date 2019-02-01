@@ -3,7 +3,7 @@ package ham.lang
 import cats.implicits._
 import ham.expr._
 import ham.errors._
-import ham.parsing.Parser
+import ham.parsing.Decl
 import ham.typing.Typer
 import ham.utils.Graph
 
@@ -82,18 +82,15 @@ class Module(name: String, imports: Seq[Import], private val expressions: Map[St
 object Module {
 
 
-  final case class ParseError(err: fastparse.Parsed.Failure) extends ham.errors.Err(err.toString())
-
-
-
 
   def parse(
              moduleName: String,
              source: String,
+             parser: String => Attempt[List[Decl]],
              moduleLoader: ModuleLoader): Attempt[Module] = {
     val moduleID = ModuleID(moduleName)
     for {
-      decls <- Parser.declarations(source).leftMap(ParseError)
+      decls <- parser(source)
       importedSymsPerModule <-
         moduleLoader.defaultImports.traverse {
           case Import.Qualified(mod) =>
