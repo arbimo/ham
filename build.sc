@@ -46,6 +46,18 @@ object script extends HamModule {
   }
 }
 
+object hydra extends HamModule {
+  override def moduleDeps = Seq( core )
+  override def ivyDeps = Agg(cats, fastparse)
+
+  override def mainClass = Some("hydra.Main")
+
+  object tests extends Tests {
+    def ivyDeps = Agg(minitest)
+    def testFrameworks = Seq("minitest.runner.Framework")
+  }
+}
+
 object build extends Module {
   // mill bloop.integrations.mil l.Bloop/install
   def bloopInstall(ev: mill.eval.Evaluator) = T.command { bloop.integrations.mill.Bloop.install(ev) }

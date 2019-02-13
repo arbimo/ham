@@ -17,12 +17,12 @@ object Tests extends SimpleTestSuite {
   val parser: String => Attempt[List[Decl]] = Parser.declarations(_).leftMap(ParseError)
 
   test("valid") {
-    println("\n======= Valid tests =======")
+    //println("\n======= Valid tests =======")
     forEachHamFilesIn("/tests/positive", checkValid)
   }
 
   test("invalid") {
-    println("\n======= Invalid tests =======")
+    //println("\n======= Invalid tests =======")
     forEachHamFilesIn("/tests/negative", checkInvalid)
   }
 
@@ -38,24 +38,25 @@ object Tests extends SimpleTestSuite {
 
 
   def checkValid(p: Path): Unit = {
-    println
+//    println
     val id = p.getFileName.toString.replaceAll(".ham", "")
     val content = Files.readAllLines(p).toArray().mkString("\n")
     val loader = Prelude.getLoader()
     loader.loadFromSource(ModuleID(id), content, parser) match {
       case Right(typed) =>
-        println(s"Successfully typed $id")
-        typed.types.foreach { case (k, v) => println(s"$k : $v") }
+        //println(s"Successfully typed $id")
+        //typed.types.foreach { case (k, v) => println(s"$k : $v") }
 
         typed.mod.mainFunction match {
           case None =>
-            println("No main")
+            // println("No main")
           // no main to try running
           case Some(mainId) =>
             loader.definitionOf(mainId) match {
               case Right(mainExpr) =>
                 Interpreter.eval(mainExpr, loader.definitionOf) match {
-                  case Right(res) => println(s"main = $res")
+                  case Right(res) =>
+                    //println(s"main = $res")
                   case Left(err) =>
                     System.err.println(s"Error while evaluating main: ${err.msg}")
                     throw err
@@ -76,7 +77,7 @@ object Tests extends SimpleTestSuite {
   }
 
   def checkInvalid(p: Path): Unit = {
-    println
+//    println
     val id = p.getFileName.toString.replaceAll(".ham", "")
     val content = Files.readAllLines(p).toArray().mkString("\n")
     val loader = Prelude.getLoader()
@@ -87,8 +88,8 @@ object Tests extends SimpleTestSuite {
         typed.types.foreach { case (k, v) => System.err.println(s"$k : $v") }
         System.exit(1)
       case Left(err) =>
-        println(s"OK: failed to type check: $id")
-        println(err)
+        //println(s"OK: failed to type check: $id")
+        //println(err)
     }
   }
 
