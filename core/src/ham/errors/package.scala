@@ -20,6 +20,15 @@ package object errors {
         throw new AssertionError(s"Computation failed")
     }
   }
+  def assertSucceeds[A](attempt: Attempt[A]): Unit = {
+    attempt match {
+      case Right(a) =>
+      case Left(err) =>
+        System.err.println(err)
+        err.printStackTrace()
+        throw new AssertionError(s"Computation failed")
+    }
+  }
   def assertFails[A](attempt: Attempt[A]): Unit =
     attempt match {
       case Left(_) =>

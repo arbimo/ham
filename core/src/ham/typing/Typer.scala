@@ -1,8 +1,5 @@
 package ham.typing
 
-
-
-
 import ham.errors.Attempt
 import ham.expr
 import ham.expr._

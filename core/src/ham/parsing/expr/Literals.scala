@@ -8,5 +8,9 @@ object Literals {
     override def apply[_: P]: P[String] = P(CharsWhileIn("0-9").!)
   }
 
+  object reals extends Parser[String] {
+    override def apply[_: P]: P[String] = P(CharsWhileIn("0-9.").!)
+  }
+
 
 }

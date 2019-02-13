@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import ham.errors.Attempt
 
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success, Try}
 
 case class ModuleID(name: String) {
   override def toString: String = name
@@ -54,10 +55,13 @@ object Expr {
 
   @throws[Error]
   private def unsafeFromAST(ast: AST, lookup: String => Option[Id], stack: List[Sym]): Expr = ast match {
-    case Num(n) if n.isExactDouble =>
-      Literal(n.toDouble, types.Real) // TODO: need to abstract over literals
-    case Num(n) =>
-      throw ham.errors.error(s"Number $n cannot be exactly converted to Double")
+    case Lit(n) =>
+      // TODO: need to abstract over literals
+      Try(n.toDouble) match {
+        case Success(value) => Literal(n.toDouble, types.Real)
+        case Failure(e) => throw ham.errors.error(s"Literal $n cannot be converted to Double")
+      }
+
     case sym @ Sym(_) if stack.contains(sym) =>
       Var(stack.indexOf(sym))
     case Sym(name) =>

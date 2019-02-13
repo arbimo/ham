@@ -20,7 +20,7 @@ object LangParser {
   def expressionParser(
                               operators: List[Operator] = Operator.defaults,
                               whitespace: WhiteSpaceHandler = WhiteSpaceHandler.Java,
-                              literals: Parser[String] = Literals.integers,
+                              literals: Parser[String] = Literals.reals,
                               identifiers: Parser[String] = Identifers.alpha
                             ): LangParser[AST] = new ExprParser(operators, whitespace, literals, identifiers)
 
@@ -35,7 +35,8 @@ object LangParser {
 
     override def ident[_: P]: P[String] = identifiers.apply
 
-    def literal[_: P]: P[Num] = P( literals.apply ).map(l => Num(BigDecimal(l.toInt)))
+    def literal[_: P]: P[Lit] = P( literals.apply )
+      .map(Lit(_))
 
     def symbol[_: P]: P[Sym] = P( Index ~ identifiers.apply ~ Index).map {
       case (si, str, _) => Sym(str)

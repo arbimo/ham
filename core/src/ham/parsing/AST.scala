@@ -2,8 +2,8 @@ package ham.parsing
 
 sealed trait AST
 
-final case class Num(rep: BigDecimal) extends AST {
-  override def toString: String = rep.toString()
+final case class Lit(rep: String) extends AST {
+  override def toString: String = rep
 }
 final case class Sym(name: String) extends AST {
   override def toString: String = name
