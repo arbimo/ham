@@ -7,3 +7,7 @@ steps:
   commands:
   - mill __.compile
   - mill __.test
+  - mill script.assembly  
+  - cp out/script/assembly/dest/out.jar hami.jar
+  - native-image -H:Name=hami -jar hami.jar
+  - ./hami
