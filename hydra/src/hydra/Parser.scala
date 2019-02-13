@@ -1,10 +1,10 @@
 package hydra
 
-import cats._
+//import cats._
 import cats.implicits._
 import fastparse.Parsed.{Failure, Success}
-import ham.errors.{Attempt, ParseError}
-import ham.expr.{Expr, Type}
+import ham.errors.{Attempt, Err, ParseError}
+import ham.expr.{Expr, Id, ModuleID, Type}
 import ham.parsing.AST
 import ham.parsing.expr.LangParser
 import ham.prelude.Prelude
@@ -28,6 +28,15 @@ case class HamModel[E](
               constraints: List[E]
               ) {
 
+  val moduleID = ModuleID("ham")
+
+  def symbols: Map[String, ham.expr.Id] =
+    constants.map(c => (c.name, moduleID / c.name)).toMap ++
+      fluents.map(f => (f.name, moduleID / f.name))
+  def types: Map[ham.expr.Id, Type] =
+  constants.map(c => (moduleID / c.name, c.tpe)).toMap ++
+      fluents.map(f => (moduleID / f.name, f.tpe))
+
   def map[B](f: E => B): HamModel[B] = {
     HamModel(
       constants.map(c => Constant(c.name, c.tpe, f(c.value))),
@@ -36,6 +45,17 @@ case class HamModel[E](
 //      dynamics.map(d => Dynamic(d.fluent, f(d.value))),
       constraints.map(f)
     )
+  }
+  def mapErr[B](f: E => Attempt[B]): Attempt[HamModel[B]] = {
+    val fThrow: E => B = f(_) match {
+      case Right(v) => v
+      case Left(e) => throw e
+    }
+    try {
+      Right(map(fThrow))
+    } catch {
+      case e: Err => Left(e)
+    }
   }
 
   def definitions: Map[String, Type] = {
@@ -132,8 +152,8 @@ object Parser {
         val empty = HamModel[AST](Nil, Nil, Nil)
         val res: HamModel[AST] = value.foldLeft(empty) {
           case (mod, x) => x match {
-            case x: Constant[AST] => mod.copy(constants = x :: mod.constants)
-            case x: Fluent => mod.copy(fluents = x :: mod.fluents)
+            case x: Constant[AST] => mod.copy(constants =  mod.constants :+ x)
+            case x: Fluent => mod.copy(fluents = mod.fluents :+ x)
             //          case x: Control => mod.copy(controls = x :: mod.controls)
             //          case x: Dynamics[AST] =>
             //            mod.copy(dynamics = mod.dynamics ++ x.l)
@@ -149,20 +169,25 @@ object Parser {
     }
   }
 
-  def evaluator[Ctx, E <: Expr](e: E, ofSym: String => Option[Either[Ctx => Any, E]]): Ctx => Any = e match {
+  def evaluator[Ctx, E <: Expr](e: E, ofSym: Id => Option[Either[Ctx => Any, E]], builtIn: String => Option[Any]): Ctx => Any = e match {
     case ham.expr.Literal(x, _ ) => (_: Ctx) => x
-    case ham.expr.Fun(Nil, body) => evaluator(body, ofSym)
+    case ham.expr.Fun(Nil, body) => evaluator(body, ofSym, builtIn)
     case ham.expr.Fun(_, body) => ???
     case ham.expr.Var(_) => ???
     case ham.expr.Symbol(id) =>
-      ofSym(id.global) match {
+      ofSym(id) match {
         case None => sys.error(s"Unknown symbol: $id")
         case Some(Left(f)) => f
-        case Some(Right(e)) => evaluator(e, ofSym)
+        case Some(Right(e)) => evaluator(e, ofSym, builtIn)
+      }
+    case ham.expr.BuiltIn(name, _) =>
+      builtIn(name) match {
+        case Some(v) => (_: Ctx) => v
+        case None => sys.error(s"Unknown built in $name")
       }
     case ham.expr.App(fun, arg) =>
-      val funPE = evaluator(fun, ofSym).asInstanceOf[Ctx => Any => Any]
-      val argPE = evaluator(arg, ofSym)
+      val funPE = evaluator(fun, ofSym, builtIn).asInstanceOf[Ctx => Any => Any]
+      val argPE = evaluator(arg, ofSym, builtIn)
       (s: Ctx) => funPE(s)(argPE(s))
 
 //    case ham.expr.IExpr.Cst(v) => (_: Ctx) => v

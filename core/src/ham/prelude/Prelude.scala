@@ -2,13 +2,13 @@ package ham.prelude
 
 import ham.expr
 import ham.expr.{BuiltIn, Type}
-import ham.lang.{Import, Module, SimpleLoader}
+import ham.lang.{Import, Module, SimpleLoader, TypedModule}
 
 object Prelude {
   import Type._
 
-  val Bool = Type.primitive("Bool")
-  val Real = Type.primitive("Real")
+  val Bool: Type = Type.primitive("Bool")
+  val Real: Type = Type.primitive("Real")
 
 
   val prelude = new Module("prelude", Nil, Map(
@@ -29,10 +29,16 @@ object Prelude {
     "/" -> BuiltIn("real.div", function(Real, Real, Real)),
     "*" -> BuiltIn("real.mul", function(Real, Real, Real)),
 
+    "PI" -> BuiltIn("real.PI", Real),
     "cos" -> BuiltIn("real.cos",function(Real, Real)),
     "sin" -> BuiltIn("real.sin", function(Real, Real)),
-
   ))
+
+  val typedPrelude: TypedModule = prelude.typeCheck(x => ham.errors.failure(s"Undefined id $x")) match {
+    case Right(types) => TypedModule(prelude, types)
+    case Left(err) =>
+      throw new RuntimeException("FATAL: Prelude failed to type check", err)
+  }
 
   def getLoader(): SimpleLoader =
     new SimpleLoader(predef = List(prelude), defaultImports = List(Import.UnQualified(prelude.id)))

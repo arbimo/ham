@@ -1,5 +1,4 @@
 package ham.state
-import ham.state.PrimitiveType.Real
 
 abstract class Field {
   type A
