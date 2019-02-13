@@ -34,7 +34,7 @@ object Main extends App {
   def typeCheck(f: String): Attempt[TypedModule] = {
 
     for {
-      content <- Platform.default.readModuleSource(ModuleID(f))
+      content <- Platform.fileSystem.readModuleSource(ModuleID(f))
       typed <- loader.loadFromSource(ModuleID(f), content, Parser.declarations(_).leftMap(ParseError))
     } yield typed
   }
