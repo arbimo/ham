@@ -1,6 +1,6 @@
 package ham.interpreter
 
-import ham.errors.Attempt
+import ham.errors.{Attempt, Fail, Succ}
 import ham.eval.Functions
 import ham.expr._
 
@@ -13,13 +13,13 @@ object Interpreter {
   def eval(e: Expr, lookup: Id => Attempt[Expr]): Attempt[Expr] = {
     val unsafeLookup: Id => Expr = id => {
       lookup(id) match {
-        case Right(e)  => e
-        case Left(err) => throw err
+        case Succ(e)   => e
+        case Fail(err) => throw err
       }
     }
     Try(eval(e, Nil, unsafeLookup)) match {
       case Success(res)                 => ham.errors.success(res)
-      case Failure(err: ham.errors.Err) => Left(err)
+      case Failure(err: ham.errors.Err) => Fail(err)
       case Failure(e)                   => throw e // this a crash do not pretend we know how to handle it
     }
 

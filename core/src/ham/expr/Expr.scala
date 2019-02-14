@@ -1,7 +1,7 @@
 package ham.expr
 
 import cats.data.NonEmptyList
-import ham.errors.Attempt
+import ham.errors.{Attempt, Fail, Succ}
 
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -42,12 +42,12 @@ object Expr {
 
   def fromAST(ast: AST, lookup: String => Option[Id]): Attempt[Expr] =
     try {
-      Right(unsafeFromAST(ast, lookup, Nil))
+      Succ(unsafeFromAST(ast, lookup, Nil))
     } catch {
       case e: ham.errors.Err =>
-        Left(new ham.errors.Err(s"error while processing AST: $ast\n ${e.getMessage}", cause = e))
+        Fail(new ham.errors.Err(s"error while processing AST: $ast\n ${e.getMessage}", cause = e))
       case e: Throwable =>
-        Left(new ham.errors.Err(s"error while processing AST: $ast\n ${e.getMessage}", cause = e))
+        Fail(new ham.errors.Err(s"error while processing AST: $ast\n ${e.getMessage}", cause = e))
     }
 
   @throws[Error]

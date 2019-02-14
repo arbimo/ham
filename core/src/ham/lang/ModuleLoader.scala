@@ -1,5 +1,7 @@
 package ham.lang
 
+import cats.implicits._
+
 import ham.errors._
 import ham.expr._
 import ham.parsing.Decl
@@ -29,7 +31,7 @@ class SimpleLoader(predef: List[Module], override val defaultImports: List[Impor
   override def typeOf(id: Id): Attempt[Type] = loaded.get(id.module) match {
     case Some(TypedModule(mod, types)) =>
       types.get(id) match {
-        case Some(tpe) => Right(tpe)
+        case Some(tpe) => Succ(tpe)
         case None =>
           assert(!mod.symbols.contains(id),
                  "Invariant failure: a symbol appears in the module but not in the types table")
@@ -41,7 +43,7 @@ class SimpleLoader(predef: List[Module], override val defaultImports: List[Impor
   override def definitionOf(id: Id): Attempt[Expr] = loaded.get(id.module) match {
     case Some(TypedModule(mod, _)) =>
       mod.definitions.get(id) match {
-        case Some(tpe) => Right(tpe)
+        case Some(tpe) => Succ(tpe)
         case None =>
           failure(s"Id $id does not appear in module ${id.module}")
       }

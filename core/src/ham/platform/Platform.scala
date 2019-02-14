@@ -2,7 +2,7 @@ package ham.platform
 
 import java.nio.file.{Files, Path, Paths}
 
-import ham.errors.Attempt
+import ham.errors.{Attempt, Fail}
 import ham.expr.ModuleID
 
 trait Platform {
@@ -79,10 +79,10 @@ object Platform {
   class PlatformWithFallback(p1: Platform, p2: Platform) extends Platform {
     override def readPath(name: String): Attempt[String] = {
       p1.readPath(name) match {
-        case Left(err) =>
+        case Fail(err) =>
           p2.readPath(name) match {
-            case Left(err2) =>
-              Left(ham.errors.combined(err, err2))
+            case Fail(err2) =>
+              Fail(ham.errors.combined(err, err2))
             case x => x
           }
         case x => x

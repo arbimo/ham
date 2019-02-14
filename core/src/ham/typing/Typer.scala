@@ -1,6 +1,6 @@
 package ham.typing
 
-import ham.errors.Attempt
+import ham.errors.{Attempt, Fail, Succ}
 import ham.expr
 import ham.expr._
 import ham.expr.Type
@@ -20,7 +20,7 @@ object Typer {
 
   def typeOf(expr: Expr, ctx: Id => Attempt[Type]): Attempt[Type] =
     try {
-      Right(analyse(expr, Env(ctx, Nil), Set.empty))
+      Succ(analyse(expr, Env(ctx, Nil), Set.empty))
     } catch {
       case e: Err => ham.errors.failure(s"Failed to type check $expr\nCause: ${e.msg}", cause = e)
     }
@@ -70,8 +70,8 @@ object Typer {
 
   def getType(name: Id, env: E, nongen: Set[Type.Var]): Type = {
     env(name) match {
-      case Right(tpe) => fresh(tpe, nongen)
-      case Left(msg)  => throw msg
+      case Succ(tpe) => fresh(tpe, nongen)
+      case Fail(msg) => throw msg
     }
   }
 

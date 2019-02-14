@@ -14,14 +14,15 @@ object PlatformTests extends SimpleTestSuite {
   }
 
   def testsResourceRead(platform: Platform): Unit = {
-    assertSucceedsTo(platform.readPath("content.txt"), "AA AA\nBB BB\n\nDD DD")
+    platform
+      .readPath("content.txt")
+      .assertSucceedsTo("AA AA\nBB BB\n\nDD DD")
 
-    assertSucceedsTo(
-      platform.readPath("tests/content.txt"),
-      "AA"
-    )
+    platform
+      .readPath("tests/content.txt")
+      .assertSucceedsTo("AA")
 
-    assertFails(platform.readPath("does-not-exists.txt"))
+    platform.readPath("does-not-exists.txt").assertFails
   }
 
 }

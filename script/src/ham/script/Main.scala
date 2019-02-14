@@ -1,8 +1,7 @@
 package ham.script
 
 import cats.implicits._
-
-import ham.errors.{Attempt, ParseError}
+import ham.errors.{Attempt, Fail, ParseError, Succ}
 import ham.expr.ModuleID
 import ham.interpreter.Interpreter
 import ham.lang.TypedModule
@@ -26,8 +25,8 @@ object Main extends App {
       ham.errors.failure(s"missing module name")
   }
   res match {
-    case Right(f) => f.apply()
-    case Left(err) =>
+    case Succ(f) => f.apply()
+    case Fail(err) =>
       System.err.println(err)
       System.exit(1)
   }
@@ -38,7 +37,7 @@ object Main extends App {
       content <- Platform.fileSystem.readModuleSource(ModuleID(f))
       typed <- loader.loadFromSource(ModuleID(f),
                                      content,
-                                     Parser.declarations(_).leftMap(ParseError))
+                                     Parser.declarations(_).leftMap(ParseError).toAttempt)
     } yield typed
   }
 

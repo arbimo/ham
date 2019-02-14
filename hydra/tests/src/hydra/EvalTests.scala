@@ -1,5 +1,9 @@
 package hydra
 
+import cats.implicits._
+
+import ham.errors._
+
 import ham.expr.Expr
 import ham.prelude.Prelude
 import ham.state.{Field, State, Word}
@@ -40,7 +44,7 @@ subject_to {
     val types = prelude.types ++ modExpr.types
     val csts  = modExpr.constants.map(c => modExpr.moduleID / c.name -> c.value).toMap
     for(c <- modExpr.constraints) {
-      val tpe = Typer.typeOf(c, id => types.get(id).toRight(ham.errors.error(s"unknown ID $id")))
+      val tpe = Typer.typeOf(c, id => types.get(id).toAttempt(ham.errors.error(s"unknown ID $id")))
       println(c)
       println(tpe)
 

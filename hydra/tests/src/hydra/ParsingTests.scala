@@ -1,5 +1,7 @@
 package hydra
 
+import cats.implicits._
+
 import ham.platform.Platform
 import ham.errors._
 import minitest._
@@ -14,7 +16,7 @@ object ParsingTests extends SimpleTestSuite with TestsMain {
       mod    <- Parser.parse(source)
     } yield mod
 
-    assertSucceeds(x)
+    x.assertSucceeds
   }
 
 }

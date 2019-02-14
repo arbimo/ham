@@ -3,7 +3,7 @@ package hydra
 //import cats._
 import cats.implicits._
 import fastparse.Parsed.{Failure, Success}
-import ham.errors.{Attempt, Err, ParseError}
+import ham.errors.{Attempt, Err, Fail, ParseError, Succ}
 import ham.expr.{Expr, Id, ModuleID, Type}
 import ham.parsing.AST
 import ham.parsing.expr.LangParser
@@ -48,19 +48,19 @@ case class HamModel[E](
   }
   def mapErr[B](f: E => Attempt[B]): Attempt[HamModel[B]] = {
     val fThrow: E => B = f(_) match {
-      case Right(v) => v
-      case Left(e)  => throw e
+      case Succ(v) => v
+      case Fail(e) => throw e
     }
     try {
-      Right(map(fThrow))
+      Succ(map(fThrow))
     } catch {
-      case e: Err => Left(e)
+      case e: Err => Fail(e)
     }
   }
 
   def definitions: Map[String, Type] = {
-    (constants.map(c => (c.name -> c.tpe)) ++
-      fluents.map(f => (f.name  -> f.tpe)) //++ controls.map(c => (c.name -> c.tpe))
+    (constants.map(c => c.name -> c.tpe) ++
+      fluents.map(f => f.name  -> f.tpe) //++ controls.map(c => (c.name -> c.tpe))
     ).toMap
   }
 
@@ -162,7 +162,7 @@ object Parser {
         ham.errors.success(res)
 
       case fail @ Failure(label, index, extra) =>
-        Left(ParseError(fail))
+        ham.errors.Fail(ParseError(fail))
     }
   }
 

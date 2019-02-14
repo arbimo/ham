@@ -26,7 +26,7 @@ class Module(name: String,
     if(sym.module != id)
       failure(s"Looking up symbol $sym in module $id")
     else
-      definitions.get(sym).toRight(error(s"No symbol $sym in module $id"))
+      definitions.get(sym).toAttempt(error(s"No symbol $sym in module $id"))
   }
 
   lazy val qualifiedNames: Map[String, Id]   = symbols.map(id => id.global -> id).toMap
@@ -39,9 +39,9 @@ class Module(name: String,
   /** Order of symbols in the module such that a symbol does not depend on any other appearing later in the order */
   def processingOrder: Attempt[List[Id]] =
     Graph.topologicalOrder(symbols, (id: Id) => dependencies(id).filter(_.module == this.id)) match {
-      case Right(order) => Right(order.reverse.toList)
+      case Right(order) => Succ(order.reverse.toList)
       case Left(Graph.Cycle(nodes)) =>
-        Left(Typer.error(s"Cycle in symbols: ${nodes.mkString(", ")}"))
+        Fail(Typer.error(s"Cycle in symbols: ${nodes.mkString(", ")}"))
     }
 
   def typeCheck(typeOfExternal: Id => Attempt[Type]): Attempt[Map[Id, Type]] = {
@@ -52,10 +52,10 @@ class Module(name: String,
     val knownTypes: Id => Attempt[Type] = id =>
       if(id.module == this.id)
         types.get(id) match {
-          case Some(t) => Right(t)
+          case Some(t) => Succ(t)
           case None if expressions.contains(id.name) =>
-            Left(Typer.error(s"Type of $id is not known yet"))
-          case None => Left(Typer.error(s"Unknown symbol $id"))
+            Fail(Typer.error(s"Type of $id is not known yet"))
+          case None => Fail(Typer.error(s"Unknown symbol $id"))
         } else
         typeOfExternal(id)
 

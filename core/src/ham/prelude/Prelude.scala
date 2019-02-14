@@ -1,5 +1,6 @@
 package ham.prelude
 
+import ham.errors.{Fail, Succ}
 import ham.expr
 import ham.expr.{BuiltIn, Type}
 import ham.lang.{Import, Module, SimpleLoader, TypedModule}
@@ -35,8 +36,8 @@ object Prelude {
 
   val typedPrelude: TypedModule =
     prelude.typeCheck(x => ham.errors.failure(s"Undefined id $x")) match {
-      case Right(types) => TypedModule(prelude, types)
-      case Left(err) =>
+      case Succ(types) => TypedModule(prelude, types)
+      case Fail(err) =>
         throw new RuntimeException("FATAL: Prelude failed to type check", err)
     }
 
