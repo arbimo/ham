@@ -13,11 +13,10 @@ final case class Application(f: AST, arg: AST) extends AST {
 }
 object Application {
   def apply(f: AST, args: List[AST]): AST = args match {
-    case Nil => f
+    case Nil    => f
     case h :: t => apply(Application(f, h), t)
   }
 }
 final case class Lambda(arg: Sym, body: AST) extends AST
 
 final case class Decl(name: Sym, expr: AST)
-

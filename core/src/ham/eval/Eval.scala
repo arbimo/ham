@@ -1,9 +1,6 @@
 package ham.eval
 
-
-
 object Eval {
-
 
 //  def evaluator[Ctx, E: ham.expr.IExpr](e: E, ofSym: String => Option[Either[Ctx => Any, E]]): Ctx => Any = e match {
 //    case ham.expr.IExpr.Cst(v) => (_: Ctx) => v
@@ -18,8 +15,4 @@ object Eval {
 //      (s: Ctx) => funPE(s)(argPE(s))
 //  }
 
-
-
-
 }
-

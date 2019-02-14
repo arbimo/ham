@@ -13,7 +13,7 @@ object ExprParsingTest extends SimpleTestSuite {
   def parses(str: String): Unit = {
     fastparse.parse(str, parser(_)) match {
       case Success(value, index) =>
-        // println("OK: " + value)
+      // println("OK: " + value)
       case fail @ Failure(label, index, extra) =>
         println("KO: " + str)
         println(fail)

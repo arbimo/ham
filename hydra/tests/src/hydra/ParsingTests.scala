@@ -11,13 +11,10 @@ object ParsingTests extends SimpleTestSuite with TestsMain {
   test("simple parsing") {
     val x = for {
       source <- platform.readPath("car.hy")
-      mod <- Parser.parse(source)
+      mod    <- Parser.parse(source)
     } yield mod
 
     assertSucceeds(x)
   }
-
-
-
 
 }

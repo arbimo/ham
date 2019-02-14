@@ -21,12 +21,12 @@ case class Fluent(name: String, tpe: Type)
 case class Constraints[E](l: List[E])
 //
 case class HamModel[E](
-              constants: List[Constant[E]],
-              fluents: List[Fluent],
+    constants: List[Constant[E]],
+    fluents: List[Fluent],
 //              controls: List[Control],
 //              dynamics: List[Dynamic[E]],
-              constraints: List[E]
-              ) {
+    constraints: List[E]
+) {
 
   val moduleID = ModuleID("ham")
 
@@ -34,7 +34,7 @@ case class HamModel[E](
     constants.map(c => (c.name, moduleID / c.name)).toMap ++
       fluents.map(f => (f.name, moduleID / f.name))
   def types: Map[ham.expr.Id, Type] =
-  constants.map(c => (moduleID / c.name, c.tpe)).toMap ++
+    constants.map(c => (moduleID / c.name, c.tpe)).toMap ++
       fluents.map(f => (moduleID / f.name, f.tpe))
 
   def map[B](f: E => B): HamModel[B] = {
@@ -49,7 +49,7 @@ case class HamModel[E](
   def mapErr[B](f: E => Attempt[B]): Attempt[HamModel[B]] = {
     val fThrow: E => B = f(_) match {
       case Right(v) => v
-      case Left(e) => throw e
+      case Left(e)  => throw e
     }
     try {
       Right(map(fThrow))
@@ -60,14 +60,14 @@ case class HamModel[E](
 
   def definitions: Map[String, Type] = {
     (constants.map(c => (c.name -> c.tpe)) ++
-      fluents.map(f => (f.name -> f.tpe)) //++ controls.map(c => (c.name -> c.tpe))
-      ).toMap
+      fluents.map(f => (f.name  -> f.tpe)) //++ controls.map(c => (c.name -> c.tpe))
+    ).toMap
   }
 
   def asState: Attempt[State] = {
     val fields = fluents.map {
       case Fluent(name, tpe) if tpe == Prelude.Real => ham.errors.success(Field.real(name))
-      case Fluent(name, tpe) => ham.errors.failure(s"Field $name has unsupported type $tpe")
+      case Fluent(name, tpe)                        => ham.errors.failure(s"Field $name has unsupported type $tpe")
     }
     fields.sequence.map(fs => new State(fs.toArray))
   }
@@ -87,8 +87,6 @@ case class HamModel[E](
 //
 //        }
 //    }
-
-
 //  def compile(e: E)(implicit ev: ham.expr.IExpr[E]): State => Any = {
 //    def ofSym(str: String): Option[Either[State => Any, E]] = {
 //      constantValue(str) match {
@@ -119,10 +117,11 @@ object Parser {
 
   def makeType(name: String): Type = Type.primitive(name)
 
-  def constantParser[_: P]: P[Constant[AST]] = P("constant" ~/ ident ~/ ":" ~ ident ~ "=" ~ expr ~ ";").map {
-    case (name, tpe, value) => Constant(name, makeType(tpe), value)
-  }
-  def fluentParser[_: P]: P[Fluent] =     P("fluent" ~/ ident ~ ":" ~ ident ~ ";").map {
+  def constantParser[_: P]: P[Constant[AST]] =
+    P("constant" ~/ ident ~/ ":" ~ ident ~ "=" ~ expr ~ ";").map {
+      case (name, tpe, value) => Constant(name, makeType(tpe), value)
+    }
+  def fluentParser[_: P]: P[Fluent] = P("fluent" ~/ ident ~ ":" ~ ident ~ ";").map {
     case (id, tpe) => Fluent(id, makeType(tpe))
   }
 //  def controlParser[_: P]: P[Control] = P("control" ~/ ident ~ ":" ~ ident ~ ";").map {
@@ -133,62 +132,67 @@ object Parser {
 //  }
 //  def dynamicsParser[_: P] :P[Dynamics[AST]] = P("dynamics" ~ "{" ~ dynamicParser.rep ~ "}").map(l => Dynamics(l.toList))
 
-  def constraintsParser[_: P]: P[Constraints[AST]] = P("subject_to" ~/ "{" ~ (expr ~ ";").rep ~ "}").map(l => Constraints(l.toList))
+  def constraintsParser[_: P]: P[Constraints[AST]] =
+    P("subject_to" ~/ "{" ~ (expr ~ ";").rep ~ "}").map(l => Constraints(l.toList))
 
-  def parseAll[_: P]: P[Seq[Any]] = Pass ~ P(
-    constantParser |
-      fluentParser |
-      // controlParser |
-      // dynamicsParser |
-      constraintsParser).rep ~ End
-
-
-
-
+  def parseAll[_: P]: P[Seq[Any]] =
+    Pass ~ P(
+      constantParser |
+        fluentParser |
+        // controlParser |
+        // dynamicsParser |
+        constraintsParser).rep ~ End
 
   def parse(str: String): Attempt[HamModel[AST]] = {
     fastparse.parse(str, parseAll(_)) match {
       case Success(value, _) =>
         val empty = HamModel[AST](Nil, Nil, Nil)
         val res: HamModel[AST] = value.foldLeft(empty) {
-          case (mod, x) => x match {
-            case x: Constant[AST] => mod.copy(constants =  mod.constants :+ x)
-            case x: Fluent => mod.copy(fluents = mod.fluents :+ x)
-            //          case x: Control => mod.copy(controls = x :: mod.controls)
-            //          case x: Dynamics[AST] =>
-            //            mod.copy(dynamics = mod.dynamics ++ x.l)
-            case x: Constraints[AST] =>
-              mod.copy(constraints = mod.constraints ++ x.l)
-          }
+          case (mod, x) =>
+            x match {
+              case x: Constant[AST] => mod.copy(constants = mod.constants :+ x)
+              case x: Fluent        => mod.copy(fluents = mod.fluents :+ x)
+              //          case x: Control => mod.copy(controls = x :: mod.controls)
+              //          case x: Dynamics[AST] =>
+              //            mod.copy(dynamics = mod.dynamics ++ x.l)
+              case x: Constraints[AST] =>
+                mod.copy(constraints = mod.constraints ++ x.l)
+            }
         }
         ham.errors.success(res)
-
 
       case fail @ Failure(label, index, extra) =>
         Left(ParseError(fail))
     }
   }
 
-  def evaluator[Ctx, E <: Expr](e: E, ofSym: Id => Option[Either[Ctx => Any, E]], builtIn: String => Option[Any]): Ctx => Any = e match {
-    case ham.expr.Literal(x, _ ) => (_: Ctx) => x
+  def evaluator[Ctx, E <: Expr](e: E,
+                                ofSym: Id => Option[Either[Ctx => Any, E]],
+                                builtIn: String => Option[Any]): Ctx => Any = e match {
+    case ham.expr.Literal(x, _) =>
+      (_: Ctx) =>
+        x
     case ham.expr.Fun(Nil, body) => evaluator(body, ofSym, builtIn)
-    case ham.expr.Fun(_, body) => ???
-    case ham.expr.Var(_) => ???
+    case ham.expr.Fun(_, body)   => ???
+    case ham.expr.Var(_)         => ???
     case ham.expr.Symbol(id) =>
       ofSym(id) match {
-        case None => sys.error(s"Unknown symbol: $id")
-        case Some(Left(f)) => f
+        case None           => sys.error(s"Unknown symbol: $id")
+        case Some(Left(f))  => f
         case Some(Right(e)) => evaluator(e, ofSym, builtIn)
       }
     case ham.expr.BuiltIn(name, _) =>
       builtIn(name) match {
-        case Some(v) => (_: Ctx) => v
+        case Some(v) =>
+          (_: Ctx) =>
+            v
         case None => sys.error(s"Unknown built in $name")
       }
     case ham.expr.App(fun, arg) =>
       val funPE = evaluator(fun, ofSym, builtIn).asInstanceOf[Ctx => Any => Any]
       val argPE = evaluator(arg, ofSym, builtIn)
-      (s: Ctx) => funPE(s)(argPE(s))
+      (s: Ctx) =>
+        funPE(s)(argPE(s))
 
 //    case ham.expr.IExpr.Cst(v) => (_: Ctx) => v
 //    case ham.expr.IExpr.Sym(name) => ofSym(name) match {

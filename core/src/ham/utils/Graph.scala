@@ -9,15 +9,11 @@ object Graph {
     * Given a directed graph, the algorithm outputs a sequence of strongly connected
     * components sorted in topological order.
     * */
-  def tarjan[V](
-               nodes: Iterable[V],
-               edges: V => Iterable[V]): Seq[collection.Set[V]] = {
+  def tarjan[V](nodes: Iterable[V], edges: V => Iterable[V]): Seq[collection.Set[V]] = {
     class Data(var index: Int, var lowLink: Int, var onStack: Boolean)
     var index = 0
     val stack = mutable.ArrayBuffer[V]()
-    val data = mutable.Map[V, Data]()
-
-
+    val data  = mutable.Map[V, Data]()
     @inline def pop(stack: mutable.ArrayBuffer[V]): V = {
       stack.remove(stack.length - 1)
     }
@@ -45,7 +41,7 @@ object Graph {
 
       if(data(v).lowLink == data(v).index) {
         val scc = mutable.Set[V]()
-        var w = stack.last
+        var w   = stack.last
         do {
           w = pop(stack)
           data(w).onStack = false
@@ -60,8 +56,7 @@ object Graph {
 
   case class Cycle[A](nodes: collection.Set[A])
 
-  def topologicalOrder[V](nodes: Iterable[V],
-               edges: V => Iterable[V]): Either[Cycle[V], Seq[V]] = {
+  def topologicalOrder[V](nodes: Iterable[V], edges: V => Iterable[V]): Either[Cycle[V], Seq[V]] = {
     val sccs = tarjan(nodes, edges)
 
     val order = mutable.ArrayBuffer[V]()
@@ -76,6 +71,5 @@ object Graph {
     }
     Right(order)
   }
-
 
 }

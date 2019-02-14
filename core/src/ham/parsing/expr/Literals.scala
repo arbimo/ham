@@ -12,5 +12,4 @@ object Literals {
     override def apply[_: P]: P[String] = P(CharsWhileIn("0-9.").!)
   }
 
-
 }

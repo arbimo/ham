@@ -9,7 +9,9 @@ import ham.utils.Graph
 
 import scala.collection.mutable
 
-class Module(name: String, imports: Seq[Import], private val expressions: Map[String, ham.expr.Expr]) {
+class Module(name: String,
+             imports: Seq[Import],
+             private val expressions: Map[String, ham.expr.Expr]) {
   val id: ModuleID = ModuleID(name)
 
   def mainFunction: Option[Id] =
@@ -17,7 +19,7 @@ class Module(name: String, imports: Seq[Import], private val expressions: Map[St
     else None
 
   def symbolNameToId(name: String): Id = id / name
-  lazy val symbols: Set[Id] = expressions.keySet.map(symbolNameToId)
+  lazy val symbols: Set[Id]            = expressions.keySet.map(symbolNameToId)
   lazy val definitions: Map[Id, Expr] = expressions
     .map { case (name, expr) => symbolNameToId(name) -> expr }
   def definition(sym: Id): Attempt[Expr] = {
@@ -27,20 +29,20 @@ class Module(name: String, imports: Seq[Import], private val expressions: Map[St
       definitions.get(sym).toRight(error(s"No symbol $sym in module $id"))
   }
 
-  lazy val qualifiedNames: Map[String, Id] = symbols.map(id => id.global -> id).toMap
-  lazy val unqualifiedNames: Map[String, Id] = symbols.map(id => id.local -> id).toMap
+  lazy val qualifiedNames: Map[String, Id]   = symbols.map(id => id.global -> id).toMap
+  lazy val unqualifiedNames: Map[String, Id] = symbols.map(id => id.local  -> id).toMap
 
   lazy val dependencies: Map[Id, Set[Id]] = expressions.map {
     case (k, v) => symbolNameToId(k) -> Expr.symbolOccurences(v)
   }
 
   /** Order of symbols in the module such that a symbol does not depend on any other appearing later in the order */
-  def processingOrder: Attempt[List[Id]] = Graph.topologicalOrder(
-    symbols,
-    (id: Id) => dependencies(id).filter(_.module == this.id)) match {
-    case Right(order) => Right(order.reverse.toList)
-    case Left(Graph.Cycle(nodes)) => Left(Typer.error(s"Cycle in symbols: ${nodes.mkString(", ")}"))
-  }
+  def processingOrder: Attempt[List[Id]] =
+    Graph.topologicalOrder(symbols, (id: Id) => dependencies(id).filter(_.module == this.id)) match {
+      case Right(order) => Right(order.reverse.toList)
+      case Left(Graph.Cycle(nodes)) =>
+        Left(Typer.error(s"Cycle in symbols: ${nodes.mkString(", ")}"))
+    }
 
   def typeCheck(typeOfExternal: Id => Attempt[Type]): Attempt[Map[Id, Type]] = {
     // mutable map in which to store the computed types for the current module
@@ -51,10 +53,10 @@ class Module(name: String, imports: Seq[Import], private val expressions: Map[St
       if(id.module == this.id)
         types.get(id) match {
           case Some(t) => Right(t)
-          case None if expressions.contains(id.name) => Left(Typer.error(s"Type of $id is not known yet"))
+          case None if expressions.contains(id.name) =>
+            Left(Typer.error(s"Type of $id is not known yet"))
           case None => Left(Typer.error(s"Unknown symbol $id"))
-        }
-      else
+        } else
         typeOfExternal(id)
 
     val isFail = processingOrder.flatMap(order => {
@@ -62,7 +64,7 @@ class Module(name: String, imports: Seq[Import], private val expressions: Map[St
         assert(!types.contains(sym))
         for {
           expr <- definition(sym)
-          tpe <- Typer.typeOf(expr, knownTypes)
+          tpe  <- Typer.typeOf(expr, knownTypes)
         } yield {
           types.update(sym, tpe)
           ()
@@ -75,34 +77,31 @@ class Module(name: String, imports: Seq[Import], private val expressions: Map[St
 
 }
 
-
-
 object Module {
 
-
-
-  def parse(
-             moduleName: String,
-             source: String,
-             parser: String => Attempt[List[Decl]],
-             moduleLoader: ModuleLoader): Attempt[Module] = {
+  def parse(moduleName: String,
+            source: String,
+            parser: String => Attempt[List[Decl]],
+            moduleLoader: ModuleLoader): Attempt[Module] = {
     val moduleID = ModuleID(moduleName)
     for {
       decls <- parser(source)
-      importedSymsPerModule <-
-        moduleLoader.defaultImports.traverse {
-          case Import.Qualified(mod) =>
-            moduleLoader.load(mod).map(tm => tm.mod.qualifiedNames)
-          case Import.UnQualified(mod) =>
-            moduleLoader.load(mod).map(tm => tm.mod.qualifiedNames ++ tm.mod.unqualifiedNames)
-        }
+      importedSymsPerModule <- moduleLoader.defaultImports.traverse {
+        case Import.Qualified(mod) =>
+          moduleLoader.load(mod).map(tm => tm.mod.qualifiedNames)
+        case Import.UnQualified(mod) =>
+          moduleLoader.load(mod).map(tm => tm.mod.qualifiedNames ++ tm.mod.unqualifiedNames)
+      }
       // fold right so that the most recent imports (first in list) override the latest ones
-      importedSyms = importedSymsPerModule.foldRight(Map[String,Id]()){ case (curr, acc) => acc ++ curr }
+      importedSyms = importedSymsPerModule.foldRight(Map[String, Id]()) {
+        case (curr, acc) => acc ++ curr
+      }
       // add symbols of the current module to the table, making sure they override previously defined ones
       lookUpTable = importedSyms ++ decls.map(_.name.name).map(name => name -> moduleID / name)
       binds <- decls.traverse {
         case ham.parsing.Decl(name, ast) =>
-          ham.expr.Expr.fromAST(ast, name => lookUpTable.get(name))
+          ham.expr.Expr
+            .fromAST(ast, name => lookUpTable.get(name))
             .map(expr => name.name -> expr)
       }
     } yield new Module(moduleName, moduleLoader.defaultImports, binds.toMap)

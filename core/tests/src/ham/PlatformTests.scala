@@ -13,11 +13,8 @@ object PlatformTests extends SimpleTestSuite {
     testsResourceRead(Platform.fileSystemOrElseResources)
   }
 
-
   def testsResourceRead(platform: Platform): Unit = {
-    assertSucceedsTo(
-      platform.readPath("content.txt"),
-      "AA AA\nBB BB\n\nDD DD")
+    assertSucceedsTo(platform.readPath("content.txt"), "AA AA\nBB BB\n\nDD DD")
 
     assertSucceedsTo(
       platform.readPath("tests/content.txt"),

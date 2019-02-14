@@ -13,14 +13,14 @@ object Interpreter {
   def eval(e: Expr, lookup: Id => Attempt[Expr]): Attempt[Expr] = {
     val unsafeLookup: Id => Expr = id => {
       lookup(id) match {
-        case Right(e) => e
+        case Right(e)  => e
         case Left(err) => throw err
       }
     }
     Try(eval(e, Nil, unsafeLookup)) match {
-      case Success(res) => ham.errors.success(res)
+      case Success(res)                 => ham.errors.success(res)
       case Failure(err: ham.errors.Err) => Left(err)
-      case Failure(e) => throw e // this a crash do not pretend we know how to handle it
+      case Failure(e)                   => throw e // this a crash do not pretend we know how to handle it
     }
 
   }
@@ -31,7 +31,7 @@ object Interpreter {
         eval(l, r :: stack, lookup)
       case Fun(args, body) if args.length <= stack.size =>
         eval(instantiate(body, stack), stack.drop(args.length), lookup)
-      case f :Fun =>
+      case f: Fun =>
         rebuild(f, stack)
       case Symbol(id) =>
         eval(lookup(id), stack, lookup)
@@ -45,7 +45,8 @@ object Interpreter {
           val arg = s.head
           val evaluatedArg = eval(arg, stack, lookup) match {
             case Literal(v, _) => v
-            case _ => throw ham.errors.error(s"an argument of built in did not evaluate to a literal")
+            case _ =>
+              throw ham.errors.error(s"an argument of built in did not evaluate to a literal")
           }
 
           s = stack.tail
@@ -61,12 +62,12 @@ object Interpreter {
 
   def instantiate(e: Expr, stack: Stack): Expr = e match {
     case App(l, r) => App(instantiate(l, stack), instantiate(r, stack))
-    case Var(n) => stack(n)
-    case x => x
+    case Var(n)    => stack(n)
+    case x         => x
   }
 
   def rebuild(e: Expr, stack: Stack): Expr = stack match {
-    case Nil => e
+    case Nil     => e
     case x :: xs => rebuild(App(e, x), xs)
   }
 }

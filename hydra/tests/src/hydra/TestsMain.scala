@@ -11,7 +11,7 @@ import scala.util.{Failure, Success}
 trait TestsMain { self: AbstractTestSuite =>
 
   def main(args: Array[String]): Unit = {
-    implicit val ctx =  scala.concurrent.ExecutionContext.global
+    implicit val ctx = scala.concurrent.ExecutionContext.global
 
     properties.foreach { f =>
       val runner = f.apply(())

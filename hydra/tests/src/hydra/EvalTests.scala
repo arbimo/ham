@@ -7,7 +7,6 @@ import ham.typing.Typer
 
 object EvalTests extends App {
 
-
   val source = """constant Pi: Real = 3.14159;
 
 fluent x: Real;
@@ -29,44 +28,42 @@ subject_to {
 
   } yield {
 
-
-    val fields = mod.fluents.map(f => Field.real(f.name))
-    val s = new State(fields.toArray)
-    val adap = s.arrayRep
-    val s0 = adap.default()
+    val fields   = mod.fluents.map(f => Field.real(f.name))
+    val s        = new State(fields.toArray)
+    val adap     = s.arrayRep
+    val s0       = adap.default()
     val xUpdater = adap.wordFieldUpdater(fields.head).get
-    val s1 = xUpdater(1)(s0)
+    val s1       = xUpdater(1)(s0)
     println(adap.view(s0, s))
     println(adap.view(s1, s))
 
-
     val types = prelude.types ++ modExpr.types
-    val csts = modExpr.constants.map(c => modExpr.moduleID / c.name -> c.value).toMap
+    val csts  = modExpr.constants.map(c => modExpr.moduleID / c.name -> c.value).toMap
     for(c <- modExpr.constraints) {
       val tpe = Typer.typeOf(c, id => types.get(id).toRight(ham.errors.error(s"unknown ID $id")))
       println(c)
       println(tpe)
 
+      val ev = Parser.evaluator[Array[Word], Expr](
+        c,
+        id => {
+          csts.get(id).orElse(prelude.mod.definition(id).toOption) match {
+            case Some(e) =>
+              Some(Right(e))
 
-
-      val ev = Parser.evaluator[Array[Word], Expr](c, id => {
-        csts.get(id).orElse(prelude.mod.definition(id).toOption) match {
-          case Some(e) =>
-            Some(Right(e))
-
-          case None =>
-            s.findField(id.local)
-              .flatMap(f => adap.fieldReader(f))
-              .map(extractor => Left(extractor))
-        }
-      },
-        builtInName => ham.eval.Functions(builtInName))
+            case None =>
+              s.findField(id.local)
+                .flatMap(f => adap.fieldReader(f))
+                .map(extractor => Left(extractor))
+          }
+        },
+        builtInName => ham.eval.Functions(builtInName)
+      )
       println(ev(s0))
       println(ev(s1))
-      }
-    modExpr
     }
-
+    modExpr
+  }
 
   println(x)
 

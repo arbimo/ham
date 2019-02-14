@@ -1,11 +1,8 @@
 package ham.parsing.expr
 
-
 final case class Operator(sym: String, arity: Int, precedence: Int)
 
-
 object Operator {
-
 
   val defaults = List(
 //    Operator("=>", 2, 1), // implication requires right associativity

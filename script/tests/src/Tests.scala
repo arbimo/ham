@@ -26,22 +26,21 @@ object Tests extends SimpleTestSuite {
     forEachHamFilesIn("/tests/negative", checkInvalid)
   }
 
-
   def forEachHamFilesIn(dir: String, run: Path => Unit): Unit = {
     val clazz = this.getClass
-    val res = clazz.getResource(dir)
-    val uri = res.toURI
-    val path = Paths.get(uri)
-    Files.list(path)
+    val res   = clazz.getResource(dir)
+    val uri   = res.toURI
+    val path  = Paths.get(uri)
+    Files
+      .list(path)
       .forEach(p => run(p))
   }
 
-
   def checkValid(p: Path): Unit = {
 //    println
-    val id = p.getFileName.toString.replaceAll(".ham", "")
+    val id      = p.getFileName.toString.replaceAll(".ham", "")
     val content = Files.readAllLines(p).toArray().mkString("\n")
-    val loader = Prelude.getLoader()
+    val loader  = Prelude.getLoader()
     loader.loadFromSource(ModuleID(id), content, parser) match {
       case Right(typed) =>
         //println(s"Successfully typed $id")
@@ -49,14 +48,14 @@ object Tests extends SimpleTestSuite {
 
         typed.mod.mainFunction match {
           case None =>
-            // println("No main")
+          // println("No main")
           // no main to try running
           case Some(mainId) =>
             loader.definitionOf(mainId) match {
               case Right(mainExpr) =>
                 Interpreter.eval(mainExpr, loader.definitionOf) match {
                   case Right(res) =>
-                    //println(s"main = $res")
+                  //println(s"main = $res")
                   case Left(err) =>
                     System.err.println(s"Error while evaluating main: ${err.msg}")
                     throw err
@@ -65,7 +64,6 @@ object Tests extends SimpleTestSuite {
                 sys.error("Could not find definition of main method")
                 System.exit(1)
             }
-
 
         }
       case Left(err) =>
@@ -78,9 +76,9 @@ object Tests extends SimpleTestSuite {
 
   def checkInvalid(p: Path): Unit = {
 //    println
-    val id = p.getFileName.toString.replaceAll(".ham", "")
+    val id      = p.getFileName.toString.replaceAll(".ham", "")
     val content = Files.readAllLines(p).toArray().mkString("\n")
-    val loader = Prelude.getLoader()
+    val loader  = Prelude.getLoader()
     loader.loadFromSource(ModuleID(id), content, parser) match {
       case Right(typed) =>
         System.err.println(s"Error: successfully typed $p")
@@ -88,8 +86,8 @@ object Tests extends SimpleTestSuite {
         typed.types.foreach { case (k, v) => System.err.println(s"$k : $v") }
         System.exit(1)
       case Left(err) =>
-        //println(s"OK: failed to type check: $id")
-        //println(err)
+      //println(s"OK: failed to type check: $id")
+      //println(err)
     }
   }
 

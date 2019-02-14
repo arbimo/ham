@@ -22,10 +22,9 @@ object Platform {
 
   // must be a def and not a val so that Path.get is not evaluated at static initialization.
   // this occurs when compiling ahead of time with GraalVM
-  def fileSystem: Platform = new Default(Paths.get("").toAbsolutePath)
-  def resources: Platform = Resources
+  def fileSystem: Platform                = new Default(Paths.get("").toAbsolutePath)
+  def resources: Platform                 = Resources
   def fileSystemOrElseResources: Platform = new PlatformWithFallback(fileSystem, resources)
-
 
   class Default(wd: Path) extends Platform {
 
@@ -41,7 +40,8 @@ object Platform {
   }
 
   object Resources extends Platform {
-    override def readPath(name: String): Attempt[String] = try {
+    override def readPath(name: String): Attempt[String] =
+      try {
 //      {
 //      val tmp = Thread.currentThread().getContextClassLoader.getResource(name)
 //      println(tmp)
@@ -57,23 +57,23 @@ object Platform {
 
 //      val clazz = this.getClass
 //      val res = clazz.getResource(name)
-      val res = Thread.currentThread().getContextClassLoader.getResources(name)
-      if(res.hasMoreElements) {
-        val url = res.nextElement()
+        val res = Thread.currentThread().getContextClassLoader.getResources(name)
         if(res.hasMoreElements) {
-          ham.errors.failure(s"More than one resource named $name")
+          val url = res.nextElement()
+          if(res.hasMoreElements) {
+            ham.errors.failure(s"More than one resource named $name")
+          } else {
+            val path  = Paths.get(url.toURI)
+            val lines = Files.readAllLines(path)
+            ham.errors.success(lines.toArray.mkString("\n"))
+          }
         } else {
-          val path = Paths.get(url.toURI)
-          val lines = Files.readAllLines(path)
-          ham.errors.success(lines.toArray.mkString("\n"))
+          ham.errors.failure(s"No resource named $name")
         }
-      } else {
-        ham.errors.failure(s"No resource named $name")
-      }
 
-    } catch {
-      case e: Exception => ham.errors.failure(s"Cannot read resource file $name", cause = e)
-    }
+      } catch {
+        case e: Exception => ham.errors.failure(s"Cannot read resource file $name", cause = e)
+      }
   }
 
   class PlatformWithFallback(p1: Platform, p2: Platform) extends Platform {
@@ -89,6 +89,5 @@ object Platform {
       }
     }
   }
-
 
 }

@@ -6,7 +6,4 @@ class Err(val msg: String, val cause: Throwable = null) extends Exception(msg, c
 
 class MultipleErr(errors: NonEmptyList[Err]) extends Err(errors.toList.map(_.msg).mkString("\n"))
 
-
 final case class ParseError(err: fastparse.Parsed.Failure) extends ham.errors.Err(err.toString())
-
-

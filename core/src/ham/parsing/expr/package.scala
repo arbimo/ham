@@ -13,5 +13,4 @@ package object expr {
     def complete[_: P]: P[A] = Pass ~ apply ~ End
   }
 
-
 }

@@ -11,6 +11,7 @@ trait WhiteSpaceHandler {
 object WhiteSpaceHandler {
 
   val Java = new WhiteSpaceHandler {
-    override implicit def whitespace: ParsingRun[_] => ParsingRun[Unit] = fastparse.JavaWhitespace.whitespace
+    override implicit def whitespace: ParsingRun[_] => ParsingRun[Unit] =
+      fastparse.JavaWhitespace.whitespace
   }
 }
