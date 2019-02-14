@@ -1,7 +1,9 @@
 package hydra
 
 //import cats._
+import cats.{Applicative, Functor}
 import cats.implicits._
+import cats.kernel.Monoid
 import fastparse.Parsed.{Failure, Success}
 import ham.errors.{Attempt, Err, Fail, ParseError, Succ}
 import ham.expr.{Expr, Id, ModuleID, Type}
@@ -9,10 +11,7 @@ import ham.parsing.AST
 import ham.parsing.expr.LangParser
 import ham.prelude.Prelude
 import ham.state.{Field, State}
-//import ham.eval.Eval
-//import ham.expr.Type
-//import ham.expr.Type.Oper
-//
+
 case class Constant[E](name: String, tpe: Type, value: E)
 case class Fluent(name: String, tpe: Type)
 //case class Control(name: String, tpe: Type)
@@ -37,22 +36,13 @@ case class HamModel[E](
     constants.map(c => (moduleID / c.name, c.tpe)).toMap ++
       fluents.map(f => (moduleID / f.name, f.tpe))
 
-  def map[B](f: E => B): HamModel[B] = {
-    HamModel(
-      constants.map(c => Constant(c.name, c.tpe, f(c.value))),
-      fluents,
-//      controls,
-//      dynamics.map(d => Dynamic(d.fluent, f(d.value))),
-      constraints.map(f)
-    )
-  }
   def mapErr[B](f: E => Attempt[B]): Attempt[HamModel[B]] = {
     val fThrow: E => B = f(_) match {
       case Succ(v) => v
       case Fail(e) => throw e
     }
     try {
-      Succ(map(fThrow))
+      Succ(this.map(fThrow))
     } catch {
       case e: Err => Fail(e)
     }
@@ -71,42 +61,33 @@ case class HamModel[E](
     }
     fields.sequence.map(fs => new State(fs.toArray))
   }
-
-//  type State = Array[Double]
-//  val stateSize = fluents.size + controls.size
-//  def genState(): State = Array.fill(stateSize)(0)
-//
-//  def constantValue(name: String): Option[E] = constants.find(_.name == name).map(_.value)
-//  def indexInState(str: String): Option[Int] =
-//    fluents.find(_.name == str) match {
-//      case Some(fl) => Some(fluents.indexOf(fl))
-//      case None =>
-//        controls.find(_.name == str) match {
-//          case Some(ctl) => Some(fluents.size + controls.indexOf(ctl))
-//          case None => None
-//
-//        }
-//    }
-//  def compile(e: E)(implicit ev: ham.expr.IExpr[E]): State => Any = {
-//    def ofSym(str: String): Option[Either[State => Any, E]] = {
-//      constantValue(str) match {
-//        case Some(e) =>
-//          Some(Right(e))
-//        case None => indexInState(str) match {
-//          case Some(i) =>
-//            Some(Left((s: State) => s(i)))
-//          case None => ham.eval.Functions(str) match {
-//            case Some(f) =>
-//              Some(Left((_: State) => f))
-//            case None =>
-//              None
-//          }
-//        }
-//      }
-//    }
-//    Eval.evaluator[State, E](e, ofSym)
-//  }
 }
+
+object HamModel {
+
+  def empty[A]: HamModel[A] = HamModel[A](Nil, Nil, Nil)
+
+  implicit def monoid[A]: Monoid[HamModel[A]] = new Monoid[HamModel[A]] {
+    override def empty: HamModel[A] = HamModel.empty
+
+    override def combine(x: HamModel[A], y: HamModel[A]): HamModel[A] =
+      HamModel(
+        x.constants ++ y.constants,
+        x.fluents ++ y.fluents,
+        x.constraints ++ y.constraints
+      )
+  }
+
+  implicit val functor: Functor[HamModel] = new Functor[HamModel] {
+    override def map[A, B](fa: HamModel[A])(f: A => B): HamModel[B] =
+      HamModel(
+        fa.constants.map(c => Constant(c.name, c.tpe, f(c.value))),
+        fa.fluents,
+        fa.constraints.map(f)
+      )
+  }
+}
+
 //
 object Parser {
 
@@ -135,40 +116,27 @@ object Parser {
   def constraintsParser[_: P]: P[Constraints[AST]] =
     P("subject_to" ~/ "{" ~ (expr ~ ";").rep ~ "}").map(l => Constraints(l.toList))
 
-  def parseAll[_: P]: P[Seq[Any]] =
+  def parseAll[_: P]: P[Seq[HamModel[AST]]] =
     Pass ~ P(
-      constantParser |
-        fluentParser |
-        // controlParser |
-        // dynamicsParser |
-        constraintsParser).rep ~ End
+      constantParser.map(c => HamModel.empty[AST].copy(constants = c :: Nil)) |
+        fluentParser.map(f => HamModel.empty[AST].copy(fluents = f :: Nil)) |
+        constraintsParser.map(cs => HamModel.empty[AST].copy(constraints = cs.l))
+    ).rep ~ End
 
   def parse(str: String): Attempt[HamModel[AST]] = {
     fastparse.parse(str, parseAll(_)) match {
-      case Success(value, _) =>
-        val empty = HamModel[AST](Nil, Nil, Nil)
-        val res: HamModel[AST] = value.foldLeft(empty) {
-          case (mod, x) =>
-            x match {
-              case x: Constant[AST] => mod.copy(constants = mod.constants :+ x)
-              case x: Fluent        => mod.copy(fluents = mod.fluents :+ x)
-              //          case x: Control => mod.copy(controls = x :: mod.controls)
-              //          case x: Dynamics[AST] =>
-              //            mod.copy(dynamics = mod.dynamics ++ x.l)
-              case x: Constraints[AST] =>
-                mod.copy(constraints = mod.constraints ++ x.l)
-            }
-        }
+      case Success(simpleModels, _) =>
+        val res: HamModel[AST] = Monoid[HamModel[AST]].combineAll(simpleModels)
         ham.errors.success(res)
 
-      case fail @ Failure(label, index, extra) =>
+      case fail: Failure =>
         ham.errors.Fail(ParseError(fail))
     }
   }
 
-  def evaluator[Ctx, E <: Expr](e: E,
-                                ofSym: Id => Option[Either[Ctx => Any, E]],
-                                builtIn: String => Option[Any]): Ctx => Any = e match {
+  def evaluator[Ctx, Expr](e: Expr,
+                           ofSym: Id => Option[Either[Ctx => Any, Expr]],
+                           builtIn: String => Option[Any]): Ctx => Any = e match {
     case ham.expr.Literal(x, _) =>
       (_: Ctx) =>
         x
