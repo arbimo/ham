@@ -4,10 +4,17 @@ import $ivy.`ch.epfl.scala::mill-bloop:1.2.5`
 import mill.define.Target
 import mill.util.Loose
 
+
+def gitBasedVersion = T.input {
+  os.proc('git, "describe", "--tags").call().out.string.trim()
+}
+
+
 object deps {
+  val kindProjector = ivy"org.spire-math::kind-projector:0.9.8"
+
   val cats = ivy"org.typelevel::cats-core:1.4.0"
   val fastparse = ivy"com.lihaoyi::fastparse:2.1.0"
-  val ammoniteOps = ivy"com.lihaoyi::ammonite-ops:1.2.1"
   val caseApp = ivy"com.github.alexarchambault::case-app:2.0.0-M3"
 
   val minitest = ivy"io.monix::minitest:2.3.2"
@@ -20,8 +27,8 @@ trait HamModule extends ScalaModule {
     "-Ydelambdafy:inline", "-Ypartial-unification"
     )
 
-  override def compileIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
-  override def scalacPluginIvyDeps = Agg(ivy"org.spire-math::kind-projector:0.9.8")
+  override def compileIvyDeps = Agg(kindProjector)
+  override def scalacPluginIvyDeps = Agg(kindProjector)
 }
 
 
