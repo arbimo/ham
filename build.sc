@@ -66,7 +66,11 @@ object hydra extends HamModule {
   }
 }
 
+object matrix extends SbtModule {
+  override def scalaVersion = "2.12.8"
+}
+
 object build extends Module {
-  // mill bloop.integrations.mil l.Bloop/install
+  // mill bloop.integrations.mill.Bloop/install
   def bloopInstall(ev: mill.eval.Evaluator) = T.command { bloop.integrations.mill.Bloop.install(ev) }
 }
