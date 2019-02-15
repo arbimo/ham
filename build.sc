@@ -16,6 +16,7 @@ object deps {
   val cats = ivy"org.typelevel::cats-core:1.4.0"
   val fastparse = ivy"com.lihaoyi::fastparse:2.1.0"
   val caseApp = ivy"com.github.alexarchambault::case-app:2.0.0-M3"
+  val spire = ivy"org.typelevel::spire:0.16.0"
 
   val minitest = ivy"io.monix::minitest:2.3.2"
 }
@@ -55,7 +56,7 @@ object script extends HamModule {
 
 object hydra extends HamModule {
   override def moduleDeps = Seq( core )
-  override def ivyDeps = Agg(cats, fastparse)
+  override def ivyDeps = Agg(cats, fastparse, spire)
 
   override def mainClass = Some("hydra.Main")
 

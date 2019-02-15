@@ -10,7 +10,8 @@ import ham.expr.{Expr, Id, ModuleID, Type}
 import ham.parsing.AST
 import ham.parsing.expr.LangParser
 import ham.prelude.Prelude
-import ham.state.{Field, State}
+import ham.state.{State, StateField}
+import spire.math.{Jet, JetDim}
 
 case class Constant[E](name: String, tpe: Type, value: E)
 case class Fluent(name: String, tpe: Type)
@@ -56,7 +57,7 @@ case class HamModel[E](
 
   def asState: Attempt[State] = {
     val fields = fluents.map {
-      case Fluent(name, tpe) if tpe == Prelude.Real => ham.errors.success(Field.real(name))
+      case Fluent(name, tpe) if tpe == Prelude.Real => ham.errors.success(StateField.real(name))
       case Fluent(name, tpe)                        => ham.errors.failure(s"Field $name has unsupported type $tpe")
     }
     fields.sequence.map(fs => new State(fs.toArray))
@@ -133,93 +134,4 @@ object Parser {
         ham.errors.Fail(ParseError(fail))
     }
   }
-
-  def evaluator[Ctx, Expr](e: Expr,
-                           ofSym: Id => Option[Either[Ctx => Any, Expr]],
-                           builtIn: String => Option[Any]): Ctx => Any = e match {
-    case ham.expr.Literal(x, _) =>
-      (_: Ctx) =>
-        x
-    case ham.expr.Fun(Nil, body) => evaluator(body, ofSym, builtIn)
-    case ham.expr.Fun(_, body)   => ???
-    case ham.expr.Var(_)         => ???
-    case ham.expr.Symbol(id) =>
-      ofSym(id) match {
-        case None           => sys.error(s"Unknown symbol: $id")
-        case Some(Left(f))  => f
-        case Some(Right(e)) => evaluator(e, ofSym, builtIn)
-      }
-    case ham.expr.BuiltIn(name, _) =>
-      builtIn(name) match {
-        case Some(v) =>
-          (_: Ctx) =>
-            v
-        case None => sys.error(s"Unknown built in $name")
-      }
-    case ham.expr.App(fun, arg) =>
-      val funPE = evaluator(fun, ofSym, builtIn).asInstanceOf[Ctx => Any => Any]
-      val argPE = evaluator(arg, ofSym, builtIn)
-      (s: Ctx) =>
-        funPE(s)(argPE(s))
-
-//    case ham.expr.IExpr.Cst(v) => (_: Ctx) => v
-//    case ham.expr.IExpr.Sym(name) => ofSym(name) match {
-//      case Some(Left(f)) => f
-//      case Some(Right(e2)) => evaluator(e2, ofSym)
-//      case None => sys.error(s"Unknown symbol: $name")
-//    }
-//    case ham.expr.IExpr.App(fun, arg) =>
-//      val funPE = evaluator(fun, ofSym).asInstanceOf[Ctx => Any => Any]
-//      val argPE = evaluator(arg, ofSym)
-//      (s: Ctx) => funPE(s)(argPE(s))
-  }
-
-//  val res = parse(
-//    """
-//constant L: Real = 10;
-//constant v_max: Real = 10;
-//constant v_min: Real = 3;
-//constant steer_max: Real = PI / 4;
-//
-//fluent x : Real;
-//fluent y : Real;
-//fluent theta: Real;
-////control v : Real;
-////control s : Real;
-//
-////dynamics {
-////  dot(x) = v * cos(theta);
-////  dot(y) = v * sin(theta);
-////  dot(theta) = v * tan(s) / L;
-////}
-//subject_to {
-//  v <= v_max;
-//  v >= v_min;
-//  abs(theta) <= steer_max;
-//  PI;
-//}
-//
-//    """.stripMargin)
-//
-//  println(res)
-//  val defs = res.definitions
-//  val typed = res.map(e => TypeChecker.typeOf(e, defs))
-//  println(typed)
-
-//  import ham.expr.IExpr._
-
-//  val s = res.genState()
-//  res.dynamics.foreach { d =>
-//    println(d.fluent)
-//    println(d.value)
-//    val f = res.compile(d.value)
-//    println(f(s))
-//  }
-//
-//  res.constraints.foreach { c =>
-//    println(c)
-//    val f = res.compile(c)
-//    println(f(s))
-//  }
-
 }

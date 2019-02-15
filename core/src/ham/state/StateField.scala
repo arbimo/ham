@@ -1,12 +1,12 @@
 package ham.state
 
-abstract class Field {
+abstract class StateField {
   type A
   val name: String
   val tpe: PrimitiveType[A]
 }
-object Field {
-  def real(_name: String): Field = new Field {
+object StateField {
+  def real(_name: String): StateField = new StateField {
     override type A = Double
     override val name: String          = _name
     override val tpe: PrimitiveType[A] = PrimitiveType.Real
