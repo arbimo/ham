@@ -18,12 +18,12 @@ fluent y: Real;
 
 
 subject_to {
-  x - 10;
+  x + y - 10;
   y - 5;
-  x -y;
-  x - cos(PI);
-  cos(x);
-  sin(x);
+  //x - y;
+  //x - cos(PI);
+  //cos(x);
+  //sin(x);
 }"""
 
   val prelude = Prelude.typedPrelude
@@ -81,9 +81,39 @@ subject_to {
         println("  " + differentiator(s))
 
       }
-
     }
+    val errors = modExpr.constraints.map(c => Compiler.differentiator(c, stateShape, defs))
+    val sg     = optimize(s0, errors, 3)
+    println(adap.view(sg, stateShape))
     modExpr
+  }
+
+  def optimize(s: Array[Double],
+               constraints: Seq[Array[Double] => Jet[Double]],
+               iters: Int): Array[Double] = {
+    import spire.implicits._
+    import spire.syntax.all._
+
+    if(iters == 0)
+      return s
+
+    val update = Array.fill[Double](s.length)(0)
+    println()
+    for(c <- constraints) {
+      val jet = c(s)
+      val up  = jet.infinitesimal.map(g => -g * jet.real)
+      println(jet)
+      println(up.mkString("[", ", ", "]"))
+      for(i <- update.indices) {
+        update(i) = update(i) + up(i)
+      }
+    }
+    for(i <- s.indices) {
+      s(i) = s(i) + update(i)
+    }
+    println(update.mkString(", "))
+    return optimize(s, constraints, iters - 1)
+
   }
 
   println(x)

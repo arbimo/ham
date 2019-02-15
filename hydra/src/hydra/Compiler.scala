@@ -14,6 +14,7 @@ object Compiler {
     Option(
       name match {
         // format: off
+        case "real.add" => (x: T) => (y: T) => F.plus(x, y)
         case "real.sub" => (x: T) => (y: T) => F.minus(x, y)
         case "real.cos" => (x: T) => T.cos(x)
         case "real.sin" => (x: T) => T.sin(x)
