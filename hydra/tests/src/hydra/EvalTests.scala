@@ -7,6 +7,7 @@ import ham.expr.{Expr, Id}
 import ham.prelude.Prelude
 import ham.state.{State, StateField, Word}
 import ham.typing.Typer
+import hydra.optim.LeastSquares
 import spire.math._
 
 object EvalTests extends App {
@@ -27,23 +28,6 @@ subject_to {
 }"""
 
   val prelude = Prelude.typedPrelude
-
-  def autoDiffBuiltIns(name: String)(implicit dim: JetDim): Option[Any] = Option(
-    name match {
-      case "real.sub" =>
-        (x: Jet[Double]) => (y: Jet[Double]) =>
-          x - y
-      case "real.cos" =>
-        (x: Jet[Double]) =>
-          x.cos()
-
-      case "real.sin" =>
-        (x: Jet[Double]) =>
-          x.sin()
-      case "real.PI" => Jet[Double](math.Pi)
-      case _         => null
-    }
-  )
 
   val x = for {
     mod <- Parser.parse(source)
@@ -84,8 +68,10 @@ subject_to {
     }
     val errors = modExpr.constraints.map(c => Compiler.differentiator(c, stateShape, defs))
     val sg     = optimize(s0, errors, 3)
+
     println(adap.view(sg, stateShape))
     modExpr
+
   }
 
   def optimize(s: Array[Double],
@@ -94,25 +80,30 @@ subject_to {
     import spire.implicits._
     import spire.syntax.all._
 
-    if(iters == 0)
-      return s
+    val ls  = new LeastSquares(constraints, s.length)
+    val res = ls.solveLinear
+//    println(res.mkString(", "))
+    res
 
-    val update = Array.fill[Double](s.length)(0)
-    println()
-    for(c <- constraints) {
-      val jet = c(s)
-      val up  = jet.infinitesimal.map(g => -g * jet.real)
-      println(jet)
-      println(up.mkString("[", ", ", "]"))
-      for(i <- update.indices) {
-        update(i) = update(i) + up(i)
-      }
-    }
-    for(i <- s.indices) {
-      s(i) = s(i) + update(i)
-    }
-    println(update.mkString(", "))
-    return optimize(s, constraints, iters - 1)
+//    if(iters == 0)
+//      return s
+//
+//    val update = Array.fill[Double](s.length)(0)
+//    println()
+//    for(c <- constraints) {
+//      val jet = c(s)
+//      val up  = jet.infinitesimal.map(g => -g * jet.real)
+//      println(jet)
+//      println(up.mkString("[", ", ", "]"))
+//      for(i <- update.indices) {
+//        update(i) = update(i) + up(i)
+//      }
+//    }
+//    for(i <- s.indices) {
+//      s(i) = s(i) + update(i)
+//    }
+//    println(update.mkString(", "))
+//    return optimize(s, constraints, iters - 1)
 
   }
 

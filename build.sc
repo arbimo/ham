@@ -55,12 +55,13 @@ object script extends HamModule {
 }
 
 object hydra extends HamModule {
-  override def moduleDeps = Seq( core )
+  override def moduleDeps = Seq(core, matrix)
   override def ivyDeps = Agg(cats, fastparse, spire)
 
   override def mainClass = Some("hydra.Main")
 
   object tests extends Tests {
+    override def mainClass = Some("hydra.EvalTests")
     def ivyDeps = Agg(minitest)
     def testFrameworks = Seq("minitest.runner.Framework")
   }
