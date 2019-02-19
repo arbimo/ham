@@ -4,9 +4,12 @@ import cats.kernel.Semigroup
 import spire.math.{Jet, JetDim}
 import spire.implicits._
 
-class Grad(vars: Array[Int], derivs: Array[Double])
+final class Grad(val vars: Array[Int], val derivs: Array[Double]) {
+  require(vars.length == derivs.length)
+  def length: Int = vars.length
+}
 
-class DiffFun(bridge: Bridge, impl: DiffFunImpl) {
+case class DiffFun(bridge: Bridge, impl: DiffFunImpl) {
 
   def eval(xs: Array[Double]): Double = {
     impl.eval(bridge.adapt(xs))
@@ -20,19 +23,13 @@ class DiffFun(bridge: Bridge, impl: DiffFunImpl) {
 
 }
 
-class DiffFunImpl(constants: Array[Boolean], f: Array[Jet[Double]] => Jet[Double]) {
+class DiffFunImpl(val arity: Int, f: Array[Jet[Double]] => Jet[Double]) {
 
-  val arity: Int                   = constants.length
   private implicit val dim: JetDim = JetDim(arity)
 
   private def jetInputs(xs: Array[Double]): Array[Jet[Double]] = {
     xs.indices.iterator
-      .map(
-        i =>
-          if(constants(i))
-            Jet(xs(i))
-          else
-            Jet(xs(i), i))
+      .map(       i => Jet(xs(i), i))
       .toArray
   }
 
@@ -55,7 +52,7 @@ trait RealFun[Dom] {
   *   if -1: the (i+ offset) parameter is not used
   *   otherwise this is an error
   */
-final class Bridge(paramMap: Array[Int], offset: Int, _outArity: Int) {
+final case class Bridge(paramMap: Array[Int], offset: Int, _outArity: Int) {
   def inArity: Int  = paramMap.length
   def outArity: Int = _outArity
 
@@ -64,7 +61,7 @@ final class Bridge(paramMap: Array[Int], offset: Int, _outArity: Int) {
     paramMap.indices.foreach(i => {
       val j = paramMap(i)
       if(j != -1)
-        tmp(j) = i
+        tmp(j) = offset + i
     })
     tmp
   }
@@ -73,7 +70,7 @@ final class Bridge(paramMap: Array[Int], offset: Int, _outArity: Int) {
     assert(in.length - offset >= inArity)
     assert(out.length >= outArity)
     var i = 0
-    while(i < in.length) {
+    while(i < inArity) {
       val j = paramMap(i)
       if(j != -1) {
         out(j) = in(offset + i)
@@ -94,6 +91,8 @@ final class Bridge(paramMap: Array[Int], offset: Int, _outArity: Int) {
     val m = (0 until inArity).map(i => o.paramMap(paramMap(i))).toArray
     new Bridge(m, offset, o.outArity)
   }
+
+  def shiftRight(n: Int): Bridge = this.copy(offset = offset + n)
 }
 
 object Bridge {

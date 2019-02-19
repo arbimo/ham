@@ -25,7 +25,8 @@ case class HamModel[E](
     fluents: List[Fluent],
 //              controls: List[Control],
 //              dynamics: List[Dynamic[E]],
-    constraints: List[E]
+    initConstraints: List[E],
+    finalConstraints: List[E]
 ) {
 
   val moduleID = ModuleID("ham")
@@ -66,7 +67,7 @@ case class HamModel[E](
 
 object HamModel {
 
-  def empty[A]: HamModel[A] = HamModel[A](Nil, Nil, Nil)
+  def empty[A]: HamModel[A] = HamModel[A](Nil, Nil, Nil, Nil)
 
   implicit def monoid[A]: Monoid[HamModel[A]] = new Monoid[HamModel[A]] {
     override def empty: HamModel[A] = HamModel.empty
@@ -75,7 +76,8 @@ object HamModel {
       HamModel(
         x.constants ++ y.constants,
         x.fluents ++ y.fluents,
-        x.constraints ++ y.constraints
+        x.initConstraints ++ y.initConstraints,
+        x.finalConstraints ++ y.finalConstraints
       )
   }
 
@@ -84,7 +86,8 @@ object HamModel {
       HamModel(
         fa.constants.map(c => Constant(c.name, c.tpe, f(c.value))),
         fa.fluents,
-        fa.constraints.map(f)
+        fa.initConstraints.map(f),
+        fa.finalConstraints.map(f)
       )
   }
 }
@@ -114,14 +117,17 @@ object Parser {
 //  }
 //  def dynamicsParser[_: P] :P[Dynamics[AST]] = P("dynamics" ~ "{" ~ dynamicParser.rep ~ "}").map(l => Dynamics(l.toList))
 
-  def constraintsParser[_: P]: P[Constraints[AST]] =
-    P("subject_to" ~/ "{" ~ (expr ~ ";").rep ~ "}").map(l => Constraints(l.toList))
+  def initConstraintsParser[_: P]: P[Constraints[AST]] =
+    P("initially" ~/ "{" ~ (expr ~ ";").rep ~ "}").map(l => Constraints(l.toList))
+  def finalConstraintsParser[_: P]: P[Constraints[AST]] =
+    P("finally" ~/ "{" ~ (expr ~ ";").rep ~ "}").map(l => Constraints(l.toList))
 
   def parseAll[_: P]: P[Seq[HamModel[AST]]] =
     Pass ~ P(
       constantParser.map(c => HamModel.empty[AST].copy(constants = c :: Nil)) |
         fluentParser.map(f => HamModel.empty[AST].copy(fluents = f :: Nil)) |
-        constraintsParser.map(cs => HamModel.empty[AST].copy(constraints = cs.l))
+        initConstraintsParser.map(cs => HamModel.empty[AST].copy(initConstraints = cs.l)) |
+        finalConstraintsParser.map(cs => HamModel.empty[AST].copy(finalConstraints = cs.l))
     ).rep ~ End
 
   def parse(str: String): Attempt[HamModel[AST]] = {

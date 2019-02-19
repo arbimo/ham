@@ -73,10 +73,10 @@ object Compiler {
     res.asInstanceOf[Array[Double] => Double]
   }
 
-  def differentiator(c: Expr, s: State, defs: Id => Option[Expr]): Array[Double] => Jet[Double] = {
+  def differentiator(c: Expr, s: State, defs: Id => Option[Expr]): Array[Jet[Double]] => Jet[Double] = {
     implicit val jetDim = JetDim(s.numFields)
 
-    val differentiator = compile[Array[Double], Expr](
+    val differentiator = compile[Array[Jet[Double]], Expr](
       c,
       id => {
         defs(id) match {
@@ -85,14 +85,13 @@ object Compiler {
 
           case None =>
             s.offset(id.local)
-              .map(i => Left((values: Array[Double]) => Jet(values(i), i)))
+              .map(i => Left((values: Array[Jet[Double]]) => values(i)))
         }
       },
       name => builtIns[Jet[Double]](name), {
-        //        builtInName => autoDiffBuiltIns(builtInName), {
         case d: Double => Jet(d)
       }
     )
-    differentiator.asInstanceOf[Array[Double] => Jet[Double]]
+    differentiator.asInstanceOf[Array[Jet[Double]] => Jet[Double]]
   }
 }

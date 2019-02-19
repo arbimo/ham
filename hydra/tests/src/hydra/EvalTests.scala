@@ -7,8 +7,9 @@ import ham.expr.{Expr, Id}
 import ham.prelude.Prelude
 import ham.state.{State, StateField, Word}
 import ham.typing.Typer
-import hydra.optim.LeastSquares
+import hydra.optim._
 import spire.math._
+
 
 object EvalTests extends App {
 
@@ -17,15 +18,15 @@ object EvalTests extends App {
 fluent x: Real;
 fluent y: Real;
 
-
-subject_to {
+initially {
   x + y - 10;
-  y - 5;
-  //x - y;
-  //x - cos(PI);
-  //cos(x);
-  //sin(x);
-}"""
+  x;
+}
+finally {
+  x + y - 20;
+  y - 10;
+}
+               """
 
   val prelude = Prelude.typedPrelude
 
@@ -50,32 +51,48 @@ subject_to {
 
     val defs: Id => Option[Expr] = id => csts.get(id).orElse(prelude.mod.definition(id).toOption)
 
-    for(c <- modExpr.constraints) {
-      val tpe = Typer.typeOf(c, id => types.get(id).toAttempt(ham.errors.error(s"unknown ID $id")))
+//    for(c <- modExpr.constraints) {
+//      val tpe = Typer.typeOf(c, id => types.get(id).toAttempt(ham.errors.error(s"unknown ID $id")))
+//
+//      val ev = Compiler.evaluator(c, stateShape, defs)
+//
+//      val differentiator = Compiler.differentiator(c, stateShape, defs)
+//
+//      println()
+//      println(s"$c  : $tpe")
+//      for(s <- List(s0, s1)) {
+//        println(adap.view(s, stateShape))
+//        println("  " + ev(s))
+////        println("  " + differentiator(s))
+//
+//      }
+//    }
+    def constraintsToFun(constraints: List[Expr]): List[DiffFun] =
+      constraints
+        .map(c => Compiler.differentiator(c, stateShape, defs))
+        .map(f => {
+          val dfi = new DiffFunImpl(stateShape.numFields, f)
+          val df = new DiffFun(Bridge.identity(stateShape.numFields), dfi)
+          df
+        })
+    val inits = constraintsToFun(modExpr.initConstraints)
+    val finals = constraintsToFun(modExpr.finalConstraints)
 
-      val ev = Compiler.evaluator(c, stateShape, defs)
+    val bands = Seq(Band.Instantaneous(inits), Band.Instantaneous(finals))
+    val pb = new hydra.optim.Problem(stateShape, bands)
+    pb.solveLinear
+    sys.exit(0)
 
-      val differentiator = Compiler.differentiator(c, stateShape, defs)
 
-      println()
-      println(s"$c  : $tpe")
-      for(s <- List(s0, s1)) {
-        println(adap.view(s, stateShape))
-        println("  " + ev(s))
-        println("  " + differentiator(s))
-
-      }
-    }
-    val errors = modExpr.constraints.map(c => Compiler.differentiator(c, stateShape, defs))
-    val sg     = optimize(s0, errors, 3)
-
-    println(adap.view(sg, stateShape))
+//    val sg     = optimize(s0, errors, 3)
+//
+//    println(adap.view(sg, stateShape))
     modExpr
 
   }
 
   def optimize(s: Array[Double],
-               constraints: Seq[Array[Double] => Jet[Double]],
+               constraints: Seq[DiffFun],
                iters: Int): Array[Double] = {
     import spire.implicits._
     import spire.syntax.all._

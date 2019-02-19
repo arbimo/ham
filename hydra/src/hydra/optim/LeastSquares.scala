@@ -7,26 +7,27 @@ import scala.util.Try
 //import dahu.refinement.common._
 //import dahu.refinement._
 
-class LeastSquares(allResiduals: Seq[RefExpr], dim: Int) {
+class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
 
-  def activeResiduals(mem: RMemory): Seq[RefExpr] =
+  def activeResiduals(mem: RMemory): Seq[DiffFun] =
     allResiduals //.filter(_.eval(mem) >= 1e-4)
 
 //  val numVars: Int = residuals.map(_.params.max).max
 
   def evalResiduals(memory: RMemory): Seq[R] = {
-    activeResiduals(memory).map(_.apply(memory).real)
+    activeResiduals(memory).map(_.eval(memory))
   }
 
   def jacobian(memory: RMemory): Matrix = {
     val jac = new MatrixFactory(activeResiduals(memory).size, 0)
-//    println("\nGradients")
+    println("\nGradients")
     for((e, i) <- activeResiduals(memory).zipWithIndex) {
-      val gradj = e.apply(memory).infinitesimal
+      val gradj = e.diff(memory)
+      println(gradj.vars.zip(gradj.derivs).mkString("\t"))
 //      println(gradj.mkString("\t"))
       var x = 0
       while(x < gradj.length) {
-        val j = x //e.params(x)
+        val j = gradj.vars(x)
 //        if(j == 6) {
 //          println("COnstraint on 6")
 //          println("params: " + e.params.toSeq)
@@ -34,7 +35,7 @@ class LeastSquares(allResiduals: Seq[RefExpr], dim: Int) {
 //          println("Value: " + e.eval(memory))
 //          println("Gradient: " + gradj(x))
 //        }
-        val dfij = gradj(x)
+        val dfij = gradj.derivs(x)
         jac(i, j) = dfij
 
         x += 1
@@ -47,26 +48,26 @@ class LeastSquares(allResiduals: Seq[RefExpr], dim: Int) {
   def solveLinear: RWMemory = {
     val zeroMem = Array.fill[Double](dim)(0) //new MemImpl(norm = _ => NoNormalize)
     val J       = jacobian(zeroMem)
-//    J.print()
+    J.print()
 
     // residuals at 0
     val x = evalResiduals(zeroMem).toArray
 
-//    println("\n Residuals at 0")
-//    println(x.toSeq)
-//
-//    println("\nJacobian")
-//    J.print()
+    println("\n Residuals at 0")
+    println(x.toSeq)
+
+    println("\nJacobian")
+    J.print()
 
     val X   = Matrix.fromArray(x)
     val lhs = J.T * J
     val rhs = J.T * X * (-1)
 
-    //  println("\n J.T * J")
-    //  lhs.print()
-    //
-    //  println("\n - J.T * r")
-    //  rhs.print()
+      println("\n J.T * J")
+      lhs.print()
+
+      println("\n - J.T * r")
+      rhs.print()
 
     // solution of J.T * J * sol = -J.T * x
     val sol = lhs.solveCholSol(rhs.toVector)
