@@ -7,6 +7,7 @@ import ham.parsing.expr.impl.OperatorClimbing
 trait LangParser[AST] {
   def expr[_: P]: P[AST]
   def ident[_: P]: P[String]
+  def lit[_: P]: P[String]
 }
 
 object LangParser {
@@ -30,9 +31,9 @@ object LangParser {
 
     override def ident[_: P]: P[String] = identifiers.apply
 
-    def literal[_: P]: P[Lit] =
-      P(literals.apply)
-        .map(Lit(_))
+    def lit[_: P]: P[String] = literals.apply
+
+    def literal[_: P]: P[Lit] = P(lit.map(Lit(_)))
 
     def symbol[_: P]: P[Sym] = P(Index ~ identifiers.apply ~ Index).map {
       case (si, str, _) => Sym(str)

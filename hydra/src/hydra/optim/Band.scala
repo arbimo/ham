@@ -11,15 +11,10 @@ object Band {
 
   final case class Instantaneous(constraints: Seq[DiffFun]) extends Band
 
-
-
-
-
 }
 
 class Problem(state: State, bands: Seq[Band]) {
   require(bands.size > 0)
-
 
   def numVars: Int = state.numFields * bands.size
 
@@ -33,16 +28,14 @@ class Problem(state: State, bands: Seq[Band]) {
 
   def solveLinear: Unit = {
 
-    val ls = new LeastSquares(constraints, numVars)
+    val ls  = new LeastSquares(constraints, numVars)
     val res = ls.solveLinear
     println(res.mkString(", "))
     for(si <- bands.indices) {
       for(fi <- 0 until state.numFields) {
-        println(state.fields.toArray.apply(fi).name+ ": " + res(si * state.numFields + fi))
+        println(state.fields.toArray.apply(fi).name + ": " + res(si * state.numFields + fi))
       }
     }
   }
 
 }
-
-

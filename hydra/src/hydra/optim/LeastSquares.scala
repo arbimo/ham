@@ -19,28 +19,20 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
   }
 
   def jacobian(memory: RMemory): Matrix = {
-    val jac = new MatrixFactory(activeResiduals(memory).size, 0)
-    println("\nGradients")
+    val jac = new MatrixFactory(activeResiduals(memory).size, dim)
+//    println("\nGradients")
     for((e, i) <- activeResiduals(memory).zipWithIndex) {
       val gradj = e.diff(memory)
-      println(gradj.vars.zip(gradj.derivs).mkString("\t"))
+//      println(gradj.vars.zip(gradj.derivs).mkString("\t"))
 //      println(gradj.mkString("\t"))
       var x = 0
       while(x < gradj.length) {
-        val j = gradj.vars(x)
-//        if(j == 6) {
-//          println("COnstraint on 6")
-//          println("params: " + e.params.toSeq)
-//          println("params: " + e.params.map(memory.read(_)).toSeq)
-//          println("Value: " + e.eval(memory))
-//          println("Gradient: " + gradj(x))
-//        }
+        val j    = gradj.vars(x)
         val dfij = gradj.derivs(x)
         jac(i, j) = dfij
 
         x += 1
       }
-//      for(p <- e.params) {}
     }
     jac.build
   }
@@ -48,30 +40,30 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
   def solveLinear: RWMemory = {
     val zeroMem = Array.fill[Double](dim)(0) //new MemImpl(norm = _ => NoNormalize)
     val J       = jacobian(zeroMem)
-    J.print()
+//    J.print()
 
     // residuals at 0
     val x = evalResiduals(zeroMem).toArray
 
-    println("\n Residuals at 0")
-    println(x.toSeq)
-
-    println("\nJacobian")
-    J.print()
+//    println("\n Residuals at 0")
+//    println(x.toSeq)
+//
+//    println("\nJacobian")
+//    J.print()
 
     val X   = Matrix.fromArray(x)
     val lhs = J.T * J
     val rhs = J.T * X * (-1)
 
-      println("\n J.T * J")
-      lhs.print()
-
-      println("\n - J.T * r")
-      rhs.print()
+//      println("\n J.T * J")
+//      lhs.print()
+//
+//      println("\n - J.T * r")
+//      rhs.print()
 
     // solution of J.T * J * sol = -J.T * x
     val sol = lhs.solveCholSol(rhs.toVector)
-    println("\nSol: "); Matrix.fromArray(sol).print()
+//    println("\nSol: "); Matrix.fromArray(sol).print()
     sol
 //    zeroMem.load(sol)
 //    zeroMem

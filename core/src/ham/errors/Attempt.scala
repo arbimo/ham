@@ -18,7 +18,9 @@ sealed abstract class Attempt[+A] {
 
   /** Unsafe methods for testing purposes */
   def assertSucceedsTo[B >: A](expected: B): Unit = this match {
-    case Succ(a) => assert(a == expected)
+    case Succ(a) =>
+      if(a != expected)
+        throw new AssertionError(s"Expected x1 but got x2:\nx1 = $expected\nx2 = $a")
     case Fail(err) =>
       System.err.println(err)
       err.printStackTrace()

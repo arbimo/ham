@@ -10,7 +10,6 @@ import ham.typing.Typer
 import hydra.optim._
 import spire.math._
 
-
 object EvalTests extends App {
 
   val source = """constant Pi: Real = 3.14159;
@@ -51,38 +50,21 @@ finally {
 
     val defs: Id => Option[Expr] = id => csts.get(id).orElse(prelude.mod.definition(id).toOption)
 
-//    for(c <- modExpr.constraints) {
-//      val tpe = Typer.typeOf(c, id => types.get(id).toAttempt(ham.errors.error(s"unknown ID $id")))
-//
-//      val ev = Compiler.evaluator(c, stateShape, defs)
-//
-//      val differentiator = Compiler.differentiator(c, stateShape, defs)
-//
-//      println()
-//      println(s"$c  : $tpe")
-//      for(s <- List(s0, s1)) {
-//        println(adap.view(s, stateShape))
-//        println("  " + ev(s))
-////        println("  " + differentiator(s))
-//
-//      }
-//    }
     def constraintsToFun(constraints: List[Expr]): List[DiffFun] =
       constraints
         .map(c => Compiler.differentiator(c, stateShape, defs))
         .map(f => {
           val dfi = new DiffFunImpl(stateShape.numFields, f)
-          val df = new DiffFun(Bridge.identity(stateShape.numFields), dfi)
+          val df  = new DiffFun(Bridge.identity(stateShape.numFields), dfi)
           df
         })
-    val inits = constraintsToFun(modExpr.initConstraints)
+    val inits  = constraintsToFun(modExpr.initConstraints)
     val finals = constraintsToFun(modExpr.finalConstraints)
 
     val bands = Seq(Band.Instantaneous(inits), Band.Instantaneous(finals))
-    val pb = new hydra.optim.Problem(stateShape, bands)
+    val pb    = new hydra.optim.Problem(stateShape, bands)
     pb.solveLinear
     sys.exit(0)
-
 
 //    val sg     = optimize(s0, errors, 3)
 //
@@ -91,9 +73,7 @@ finally {
 
   }
 
-  def optimize(s: Array[Double],
-               constraints: Seq[DiffFun],
-               iters: Int): Array[Double] = {
+  def optimize(s: Array[Double], constraints: Seq[DiffFun], iters: Int): Array[Double] = {
     import spire.implicits._
     import spire.syntax.all._
 

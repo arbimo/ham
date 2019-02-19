@@ -1,9 +1,12 @@
 package hydra.optim
 
-import cats.kernel.Semigroup
 import spire.math.{Jet, JetDim}
 import spire.implicits._
 
+/**
+  * A partial gradient.
+  * For each i in [0..vars.length], derivs(i) is the partial derivative of the vars(i)th variable.
+  */
 final class Grad(val vars: Array[Int], val derivs: Array[Double]) {
   require(vars.length == derivs.length)
   def length: Int = vars.length
@@ -29,20 +32,13 @@ class DiffFunImpl(val arity: Int, f: Array[Jet[Double]] => Jet[Double]) {
 
   private def jetInputs(xs: Array[Double]): Array[Jet[Double]] = {
     xs.indices.iterator
-      .map(       i => Jet(xs(i), i))
+      .map(i => Jet(xs(i), i))
       .toArray
   }
 
   def jet(xs: Array[Double]): Jet[Double]    = f(jetInputs(xs))
   def eval(xs: Array[Double]): Double        = jet(xs).real
   def diff(xs: Array[Double]): Array[Double] = jet(xs).infinitesimal
-
-}
-
-trait RealFun[Dom] {
-
-  def eval(dom: Dom): Double
-  def diff(dom: Dom): Jet[Double]
 
 }
 

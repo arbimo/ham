@@ -42,21 +42,6 @@ object Platform {
   object Resources extends Platform {
     override def readPath(name: String): Attempt[String] =
       try {
-//      {
-//      val tmp = Thread.currentThread().getContextClassLoader.getResource(name)
-//      println(tmp)
-//      val path = Paths.get(tmp.toURI)
-//
-//      val clazz = this.getClass
-//      val res = clazz.getResource("tests")
-//      val uri = res.toURI
-////      val path = Paths.get(uri)
-//      Files.list(path)
-//        .forEach(p => println)
-//    }
-
-//      val clazz = this.getClass
-//      val res = clazz.getResource(name)
         val res = Thread.currentThread().getContextClassLoader.getResources(name)
         if(res.hasMoreElements) {
           val url = res.nextElement()
