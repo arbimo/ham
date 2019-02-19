@@ -102,7 +102,7 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
                    verbose: Boolean = false) {
     def println(str: String): Unit = if(verbose) scala.Predef.println(str)
 
-    def this(mem: RWMemory) = this(tau = 0.00001, goodUpdate = 0.5, errorLimit = 1e-7, mem)
+    def this(mem: RWMemory) = this(tau = 0.00001, goodUpdate = 0.5, errorLimit = 1e-12, mem)
 
     var lambda: Double = -1
     var lastGood       = mem.clone() //.dump

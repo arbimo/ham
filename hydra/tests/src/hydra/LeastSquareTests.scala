@@ -9,7 +9,7 @@ import ham.errors._
 import hydra.leastsquares.{LS, LSParser}
 import minitest._
 
-object ParsingTests extends SimpleTestSuite with TestsMain {
+object LeastSquareTests extends SimpleTestSuite {
 
   val platform = Platform.resources
 
@@ -24,12 +24,12 @@ object ParsingTests extends SimpleTestSuite with TestsMain {
     cnt
   }
 
-  def runAndValidate(p: Path): Unit = {
+  def runAndValidate(p: Path, linear: Boolean): Unit = {
     val pb     = p.getFileName.toString
     val source = Files.readAllLines(p).toArray().mkString("\n") //platform.readPath(p.toString)
     val x = for {
       mod <- LS.parse(source)
-      sol <- LS.solve(mod)
+      sol <- if(linear) LS.solveLinear(mod) else LS.solveNonlinear(mod)
     } yield {
       mod.expected.foreach {
         case (variable, expectedValue) =>
@@ -44,9 +44,23 @@ object ParsingTests extends SimpleTestSuite with TestsMain {
     x.assertSucceeds
   }
 
-  test("least-square linear tests") {
-    val numRuns = forEachFileIn("least-squares/linear", runAndValidate)
-    assert(numRuns >= 2, "Was expecting at least 2 test files")
+  val numLinearInstances    = 2
+  val numNonLinearInstances = 1
+
+  test("linear least-squares") {
+    val numRuns = forEachFileIn("least-squares/linear", runAndValidate(_, linear = true))
+    assert(numRuns >= numLinearInstances, s"Was expecting at least $numLinearInstances test files")
+  }
+
+  test("nonlinear least-squares (linear instances)") {
+    val numRuns = forEachFileIn("least-squares/linear", runAndValidate(_, linear = false))
+    assert(numRuns >= numLinearInstances, s"Was expecting at least $numLinearInstances test files")
+  }
+
+  test("nonlinear least-squares (nonlinear instances)") {
+    val numRuns = forEachFileIn("least-squares/nonlinear", runAndValidate(_, linear = false))
+    assert(numRuns >= numNonLinearInstances,
+           s"Was expecting at least $numNonLinearInstances test files")
   }
 
 }

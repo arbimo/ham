@@ -23,8 +23,7 @@ object LS {
     } yield modExpr
   }
 
-  def solve(mod: LSModel[Expr]): Attempt[Map[String, Double]] = {
-
+  def extract(mod: LSModel[Expr]): Attempt[(State, Seq[DiffFun])] = {
     val fields     = mod.variables.map(f => StateField.real(f.name))
     val stateShape = new State(fields.toArray)
     val adap       = stateShape.arrayRep
@@ -40,16 +39,35 @@ object LS {
           val df  = new DiffFun(Bridge.identity(stateShape.numFields), dfi)
           df
         })
-    val inits = constraintsToFun(mod.constraints)
-
-    val ls  = new LeastSquares(inits, stateShape.numFields)
-    val sol = ls.solveLinear
-
-    ham.errors.success(
-      stateShape.fields.zipWithIndex.foldLeft(ListMap.empty[String, Double]) {
-        case (m, (f, i)) => m.updated(f.name, sol(i))
-      }
-    )
+    val errors = constraintsToFun(mod.constraints)
+    ham.errors.success((stateShape, errors))
   }
 
+  def solveLinear(mod: LSModel[Expr]): Attempt[Map[String, Double]] = {
+    extract(mod).map {
+      case (stateShape, errors) =>
+        val ls  = new LeastSquares(errors, stateShape.numFields)
+        val sol = ls.solveLinear
+
+        stateShape.fields.zipWithIndex.foldLeft(ListMap.empty[String, Double]) {
+          case (m, (f, i)) => m.updated(f.name, sol(i))
+        }
+    }
+  }
+
+  def solveNonlinear(mod: LSModel[Expr]): Attempt[Map[String, Double]] = {
+    extract(mod).map {
+      case (stateShape, errors) =>
+        val ls = new LeastSquares(errors, stateShape.numFields)
+
+        val s0 = Array.fill[Double](stateShape.numFields)(0.0001)
+        ls.lmIteration(s0, 100)
+
+        val sol = s0
+
+        stateShape.fields.zipWithIndex.foldLeft(ListMap.empty[String, Double]) {
+          case (m, (f, i)) => m.updated(f.name, sol(i))
+        }
+    }
+  }
 }
