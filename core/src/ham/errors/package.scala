@@ -28,9 +28,16 @@ package object errors {
     new MultipleErr(NonEmptyList(err1, err2 :: others.toList))
   def failure(msg: String, cause: Throwable = null): Attempt[Nothing] = Fail(error(msg, cause))
   def success[A](a: A): Attempt[A]                                    = Succ(a)
+  def attempt[A](a: => A): Attempt[A] =
+    try {
+      Succ(a)
+    } catch {
+      case err: Err => Fail(err)
+    }
 
   implicit class OptionOps[A](private val v: Option[A]) extends AnyVal {
-    def toAttempt(err: => Err): Attempt[A] = Attempt.fromOption(v, err)
+    def toAttempt(err: => Err): Attempt[A]       = Attempt.fromOption(v, err)
+    def toAttemptMsg(err: => String): Attempt[A] = Attempt.fromOption(v, error(err))
   }
   implicit class EitherOps[A](private val v: Either[Err, A]) extends AnyVal {
     def toAttempt: Attempt[A] = Attempt.fromEither(v)

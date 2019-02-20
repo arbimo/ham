@@ -7,6 +7,12 @@ import cats.{Applicative, Eval, Monad, MonadError, Traverse}
 import scala.annotation.tailrec
 
 sealed abstract class Attempt[+A] {
+
+  def orElse[B >: A](alt: => Attempt[B]): Attempt[B] = this match {
+    case succ: Attempt.Succ[A] => succ
+    case _                     => alt
+  }
+
   def toEither: Either[Err, A] = this match {
     case Attempt.Succ(v) => Right(v)
     case Attempt.Fail(e) => Left(e)
