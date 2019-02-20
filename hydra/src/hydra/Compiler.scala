@@ -8,15 +8,24 @@ import spire.math._
 
 object Compiler {
 
-  def builtIns[@specialized(Double) T: Field: Trig](name: String): Option[Any] = {
+  implicit val jetDoubleOrder = new Order[Jet[Double]] {
+    override def compare(x: Jet[Double], y: Jet[Double]): Int =
+      Order[Double].compare(x.real, y.real)
+  }
+
+  def builtIns[@specialized(Double) T: Field: Trig: Order](name: String): Option[Any] = {
     val F: Field[T] = Field[T]
     val T: Trig[T]  = Trig[T]
+    val O: Order[T] = Order[T]
     Option(
       name match {
         // format: off
         case "real.mul" => (x: T) => (y: T) => F.times(x, y)
         case "real.add" => (x: T) => (y: T) => F.plus(x, y)
         case "real.sub" => (x: T) => (y: T) => F.minus(x, y)
+        case "real.min" => (x: T) => (y: T) => O.min(x, y)
+        case "real.max" => (x: T) => (y: T) => O.max(x, y)
+        case "real.abs" => (x: T) => O.max(x, F.negate(x))
         case "real.cos" => (x: T) => T.cos(x)
         case "real.sin" => (x: T) => T.sin(x)
         case "real.PI" => F.fromDouble(math.Pi)
