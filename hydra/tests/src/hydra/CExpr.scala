@@ -39,7 +39,9 @@ object CExpr {
     "1 * 2 + 4",
     "true || false",
     "false && true",
-    "1 < 2 || true"
+    "1 < 2 || true",
+    "max",
+    "sin"
   ).map(parseExpr).sequence.unsafeGet
 
   implicit def arbitraryExpr: Arbitrary[CExpr] = Arbitrary(Gen.oneOf(exprs))
