@@ -3,23 +3,27 @@ package ham.matrix
 import edu.emory.mathcs.csparsej.tdouble.Dcs_common.Dcs
 import edu.emory.mathcs.csparsej.tdouble._
 
-import scala.collection.mutable
-
 class MatrixFactory(m: Int, n: Int) {
-  private val M: Dcs  = Dcs_util.cs_spalloc(m, n, 1, true, true)
-  private val entries = new mutable.LongMap[Null]()
+  private val M: Dcs = Dcs_util.cs_spalloc(m, n, 1, true, true)
 
   private def merge(i: Int, j: Int): Long = i.toLong + (j.toLong << 32)
 
   def update(i: Int, j: Int, value: Double): Unit = {
 
-//    require(!entries.contains(merge(i, j)), s"duplicate entry: ($i, $j)")
-//    entries.update(merge(i, j), null)
     Dcs_entry.cs_entry(M, i, j, value)
   }
 
-  // TODO: use built in feature to remove duplicate and zero entries
-  def build: Matrix = new Matrix(Dcs_compress.cs_compress(M))
+  def build: Matrix = {
+    val CSC = Dcs_compress.cs_compress(M)
+    if(CSC == null) throw new RuntimeException("Compression failed")
+
+    val duplStatus = Dcs_dupl.cs_dupl(CSC)
+    if(!duplStatus) throw new RuntimeException("Deduplication failed")
+    val dropZerosResult = Dcs_dropzeros.cs_dropzeros(CSC)
+    if(dropZerosResult < 0) throw new RuntimeException("Dropping zeros failed")
+
+    new Matrix(CSC)
+  }
 }
 
 class Matrix(private val M: Dcs) { lhs =>

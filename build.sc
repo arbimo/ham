@@ -69,7 +69,7 @@ object hydra extends HamModule {
 
 object matrix extends HamModule {
 
-  // csparse module could be a JavaModule but bllop integration requires a scala version to be set
+  // csparse module could be a JavaModule but bloop integration requires a scala version to be set
   object csparse extends ScalaModule {
     override def scalaVersion = "2.12.8"
 
