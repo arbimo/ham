@@ -27,7 +27,9 @@ final case class Var(pos: Int)                         extends Expr
 final case class Symbol(id: Id) extends Expr {
   override def toString: String = id.local
 }
-final case class BuiltIn(name: String, tpe: Type) extends Expr
+final case class BuiltIn(name: String, tpe: Type) extends Expr {
+  override def toString: String = name
+}
 final case class Literal(value: Any, tpe: Type) extends Expr {
   override def toString: String = value.toString
 }

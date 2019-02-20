@@ -1,12 +1,10 @@
 package hydra
 
 import java.nio.file.{Files, Path, Paths}
-import java.util.stream.Collectors
 
 import cats.implicits._
 import ham.platform.Platform
-import ham.errors._
-import hydra.leastsquares.{LS, LSParser}
+import hydra.leastsquares.LS
 import minitest._
 
 object LeastSquareTests extends SimpleTestSuite {
@@ -14,8 +12,7 @@ object LeastSquareTests extends SimpleTestSuite {
   val platform = Platform.resources
 
   def forEachFileIn(dir: String, run: Path => Unit): Int = {
-    val res = Thread.currentThread().getContextClassLoader.getResource(dir)
-//    val res   = clazz.getResource(dir)
+    val res   = Thread.currentThread().getContextClassLoader.getResource(dir)
     val uri   = res.toURI
     val path  = Paths.get(uri)
     val files = Files.list(path)

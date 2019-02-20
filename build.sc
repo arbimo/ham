@@ -19,27 +19,34 @@ object deps {
   val spire = ivy"org.typelevel::spire:0.16.0"
 
   val minitest = ivy"io.monix::minitest:2.3.2"
+  val minitestLaws = ivy"io.monix::minitest-laws:2.3.2"
 }
 import deps._
 
 trait HamModule extends ScalaModule {
   def scalaVersion = "2.12.8"
   def scalacOptions = Seq(
-    "-Ydelambdafy:inline", "-Ypartial-unification"
+    "-Ydelambdafy:inline",
+    "-Ypartial-unification",
+    "-Yrangepos"
     )
 
   override def compileIvyDeps = Agg(kindProjector)
   override def scalacPluginIvyDeps = Agg(kindProjector)
+
+  trait MiniTests extends super.Tests {
+    def ivyDeps = Agg(minitest, minitestLaws)
+    def testFrameworks = Seq("minitest.runner.Framework")
+  }
+}
+trait CommonTests {
 }
 
 
 object core extends HamModule {
   override def ivyDeps = Agg(cats, fastparse)
 
-  object tests extends Tests { 
-    def ivyDeps = Agg(minitest)
-    def testFrameworks = Seq("minitest.runner.Framework")
-  }
+  object tests extends MiniTests
 }
 
 object script extends HamModule {
@@ -48,10 +55,7 @@ object script extends HamModule {
 
   override def mainClass = Some("ham.script.Main")
 
-  object tests extends Tests {
-    def ivyDeps = Agg(minitest)
-    def testFrameworks = Seq("minitest.runner.Framework")
-  }
+  object tests extends MiniTests
 }
 
 object hydra extends HamModule {
@@ -60,11 +64,7 @@ object hydra extends HamModule {
 
   override def mainClass = Some("hydra.Main")
 
-  object tests extends Tests {
-    override def mainClass = Some("hydra.EvalTests")
-    def ivyDeps = Agg(minitest)
-    def testFrameworks = Seq("minitest.runner.Framework")
-  }
+  object tests extends MiniTests
 }
 
 object matrix extends HamModule {

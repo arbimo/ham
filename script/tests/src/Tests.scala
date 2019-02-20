@@ -14,7 +14,8 @@ import minitest._
 
 object Tests extends SimpleTestSuite {
 
-  val parser: String => Attempt[List[Decl]] = Parser.declarations(_).leftMap(ParseError).toAttempt
+  val parser: String => Attempt[List[Decl]] =
+    ham.parsing.modules.Parser.default.declarations(_).leftMap(ParseError).toAttempt
 
   test("valid") {
     //println("\n======= Valid tests =======")

@@ -2,7 +2,7 @@ package ham.prelude
 
 import ham.errors.{Fail, Succ}
 import ham.expr
-import ham.expr.{BuiltIn, Type}
+import ham.expr.{BuiltIn, Expr, Type}
 import ham.lang.{Import, Module, SimpleLoader, TypedModule}
 
 object Prelude {
@@ -24,15 +24,21 @@ object Prelude {
       "not"   -> BuiltIn("bool.not", function(Bool, Bool)),
       "<"     -> BuiltIn("real.lt", Type.function(Real, Real, Bool)),
       "<="    -> BuiltIn("real.leq", Type.function(Real, Real, Bool)),
+      ">="    -> BuiltIn("real.geq", Type.function(Real, Real, Bool)), // todo: GEQ should be syntactic sugar for LEQ
       "+"     -> BuiltIn("real.add", function(Real, Real, Real)),
       "-"     -> BuiltIn("real.sub", function(Real, Real, Real)),
       "/"     -> BuiltIn("real.div", function(Real, Real, Real)),
       "*"     -> BuiltIn("real.mul", function(Real, Real, Real)),
+      "abs"   -> BuiltIn("real.abs", function(Real, Real)),
+      "max"   -> BuiltIn("real.max", function(Real, Real, Real)),
+      "min"   -> BuiltIn("real.min", function(Real, Real, Real)),
       "PI"    -> BuiltIn("real.PI", Real),
       "cos"   -> BuiltIn("real.cos", function(Real, Real)),
       "sin"   -> BuiltIn("real.sin", function(Real, Real)),
     )
   )
+
+  def unsafeBuiltIn(name: String): Expr = prelude.definition(prelude.symbolNameToId(name)).unsafeGet
 
   val typedPrelude: TypedModule =
     prelude.typeCheck(x => ham.errors.failure(s"Undefined id $x")) match {

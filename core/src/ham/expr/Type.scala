@@ -9,7 +9,13 @@ import scala.reflect.ClassTag
 sealed abstract class Type {
   override def toString: String = Type.show(this)
 
-  def arity: Int = this match {
+  // TODO: this an ugly workaroud
+  override def equals(obj: Any): Boolean = obj match {
+    case x: Type => x.toString == this.toString
+    case _       => false
+  }
+
+  lazy val arity: Int = this match {
     case Oper(Type.functionSymbol, List(_, b)) => 1 + b.arity
     case v: Type.Var =>
       v.instance match {

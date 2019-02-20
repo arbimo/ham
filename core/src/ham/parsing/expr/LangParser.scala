@@ -2,12 +2,14 @@ package ham.parsing.expr
 
 import ham.parsing._
 import fastparse._
+import ham.errors.Attempt
 import ham.parsing.expr.impl.OperatorClimbing
 
 trait LangParser[AST] {
   def expr[_: P]: P[AST]
   def ident[_: P]: P[String]
   def lit[_: P]: P[String]
+
 }
 
 object LangParser {
@@ -51,26 +53,3 @@ object LangParser {
   }
 
 }
-//
-//object SourceParser {
-//  import JavaWhitespace._
-//
-//  val base = OperatorClimbing.base
-//
-//  def expr[_: P]: P[AST] = base.expr
-//  def ident[_: P]: P[Sym] = base.ident.map(Sym)
-//
-//  def function[_: P]: P[Decl] = P("function" ~/ ident ~ "(" ~ ident.rep(sep = ",") ~ ")" ~ "{" ~/ expr ~ "}" ).map {
-//    case (id, args, body) =>
-//      def asLambda(args: List[Sym], body: AST): AST = args match {
-//        case Nil => body
-//        case h :: t => Lambda(h, asLambda(t, body))
-//      }
-//      Decl(id, asLambda(args.toList, body))
-//  }
-//
-//  def constant[_: P]: P[Decl] = P(ident ~ "=" ~ expr).map { case (id, expr) => Decl(id, expr)}
-//
-//  def declaration[_: P]: P[Decl] = P(function | constant)
-//
-//}

@@ -1,7 +1,7 @@
-package hydra.optim
+package hydra.teb
 
 import ham.state.State
-import hydra.optim.Band.Instantaneous
+import hydra.optim._
 
 sealed abstract class Band {
   def constraints: Seq[DiffFun]
@@ -14,7 +14,7 @@ object Band {
 }
 
 class Problem(state: State, bands: Seq[Band]) {
-  require(bands.size > 0)
+  require(bands.nonEmpty)
 
   def numVars: Int = state.numFields * bands.size
 

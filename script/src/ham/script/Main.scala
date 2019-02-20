@@ -11,6 +11,7 @@ import ham.prelude.Prelude
 object Main extends App {
 
   lazy val loader = Prelude.getLoader()
+  val parser      = ham.parsing.modules.Parser.default
 
   val res: Attempt[() => Unit] = args match {
     case Array(module)        => run(module).map(a => () => println(a))
@@ -37,7 +38,7 @@ object Main extends App {
       content <- Platform.fileSystem.readModuleSource(ModuleID(f))
       typed <- loader.loadFromSource(ModuleID(f),
                                      content,
-                                     Parser.declarations(_).leftMap(ParseError).toAttempt)
+                                     parser.declarations(_).leftMap(ParseError).toAttempt)
     } yield typed
   }
 

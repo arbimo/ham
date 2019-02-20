@@ -24,6 +24,7 @@ class SimpleLoader(predef: List[Module], override val defaultImports: List[Impor
     extends ModuleLoader
     with Env {
 
+  // todo: not thread safe
   private val loaded = mutable.Map[ModuleID, TypedModule]()
 
   override def environment: Env = this

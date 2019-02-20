@@ -1,15 +1,15 @@
-package ham.script
-
-import ham.parsing._
+package ham.parsing.modules
+import fastparse.Parsed.{Failure, Success}
+import fastparse.{P, Pass}
+import ham.parsing.{AST, Decl, Lambda, Sym}
+import ham.parsing.expr.LangParser
 
 import fastparse._
 import JavaWhitespace._
 import fastparse.Parsed.{Failure, Success}
 import ham.parsing.expr.LangParser
 
-object Parser {
-
-  private val base = LangParser.default
+class Parser(private val base: LangParser[AST]) {
 
   private def expr[_: P]: P[AST]  = base.expr
   private def ident[_: P]: P[Sym] = base.ident.map(Sym)
@@ -32,4 +32,9 @@ object Parser {
       case x: Failure            => Left(x)
     }
 
+}
+
+object Parser {
+
+  val default = new Parser(LangParser.default)
 }
