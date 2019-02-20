@@ -9,20 +9,9 @@ import scala.reflect.ClassTag
 sealed abstract class Type {
   override def toString: String = Type.show(this)
 
-  // TODO: this an ugly workaroud
-  override def equals(obj: Any): Boolean = obj match {
-    case x: Type => x.toString == this.toString
-    case _       => false
-  }
-
   lazy val arity: Int = this match {
     case Oper(Type.functionSymbol, List(_, b)) => 1 + b.arity
-    case v: Type.Var =>
-      v.instance match {
-        case Some(x) => x.arity
-        case None    => 0
-      }
-    case _ => 0
+    case _                                     => 0
   }
 }
 
@@ -38,9 +27,7 @@ object Type {
     function(from1, function(from2, from3, to))
   def forall(f: Type => Type): Type = f(new Type.Var)
 
-  final class Var() extends Type {
-    var instance: Option[Type] = None
-  }
+  final class Var()                                     extends Type
   final case class Oper(name: String, args: List[Type]) extends Type
 
   def show(tpe: Type): String = {
@@ -48,15 +35,11 @@ object Type {
 
     def impl(tpe: Type): String = tpe match {
       case v: Var =>
-        v.instance match {
-          case Some(i) => impl(i)
-          case None =>
-            if(!view.contains(v)) {
-              val newName = ('α'.toInt + view.size).toChar.toString
-              view.update(v, newName)
-            }
-            view(v)
+        if(!view.contains(v)) {
+          val newName = ('α'.toInt + view.size).toChar.toString
+          view.update(v, newName)
         }
+        view(v)
       case Oper(name, args) => {
         if(args.length == 0)
           name
@@ -67,6 +50,36 @@ object Type {
       }
     }
     impl(tpe)
+  }
+
+  def equivalent(lhs: Type, rhs: Type): Boolean = {
+    val xs        = mutable.Map[Type.Var, Int]()
+    val ys        = mutable.Map[Type.Var, Int]()
+    var next: Int = 0
+    def unifiable(lhs: Type, rhs: Type): Boolean = (lhs, rhs) match {
+      case (x: Var, y: Var) =>
+        if(xs.contains(x) && ys.contains(y))
+          xs(x) == ys(y)
+        else if(xs.contains(x) || ys.contains(y))
+          false // one already seen but not the other
+        else {
+          next += 1
+          xs(x) = next
+          ys(y) = next
+          true
+        }
+      case (Oper(xname, xargs), Oper(yname, yargs)) =>
+        if(xname != yname)
+          false
+        else if(xargs.length != yargs.length)
+          false
+        else {
+          xargs.zip(yargs).forall { case (x, y) => unifiable(x, y) }
+        }
+      case _ => false
+
+    }
+    unifiable(lhs, rhs)
   }
 
 }

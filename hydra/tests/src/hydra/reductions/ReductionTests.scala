@@ -1,6 +1,7 @@
 package hydra.reductions
 
 import ham.errors._
+import ham.expr.Type
 import hydra.CExpr
 import minitest.SimpleTestSuite
 import minitest.laws.Checkers
@@ -11,7 +12,11 @@ object ReductionTests extends SimpleTestSuite with Checkers {
     ce.tpe match {
       case Succ(tpe) =>
         val reduced = ce.reduced
-        reduced.tpe.assertSucceedsTo(tpe)
+        reduced.tpe match {
+          case Succ(typeAfter) =>
+            Type.equivalent(tpe, typeAfter)
+          case x => x.assertSucceeds
+        }
         true
       case _ => false
     }
