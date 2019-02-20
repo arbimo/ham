@@ -4,9 +4,6 @@ import ham.matrix._
 
 import scala.util.Try
 
-//import dahu.refinement.common._
-//import dahu.refinement._
-
 class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
 
   def activeResiduals(mem: RMemory): Seq[DiffFun] =
@@ -62,9 +59,12 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
 //      rhs.print()
 
     // solution of J.T * J * sol = -J.T * x
-    val sol = lhs.solveCholSol(rhs.toVector)
-//    println("\nSol: "); Matrix.fromArray(sol).print()
-    sol
+    val sol =
+      Try(lhs.solveCholSol(rhs.toVector))
+        .orElse(Try(lhs.solveQR(rhs.toVector)))
+        .getOrElse(throw new RuntimeException("OOPS"))
+    println("\nSol: "); Matrix.fromArray(sol).print()
+    sol.map(x => if(x.isNaN) 0 else x)
 //    zeroMem.load(sol)
 //    zeroMem
 //    println("\nRes: "); Matrix.fromArray(ls.evalResiduals(mem).toArray).print()
