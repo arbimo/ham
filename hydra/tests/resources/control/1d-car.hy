@@ -15,11 +15,11 @@ subject_to {
 }
 
 initially {
-  d == 0;
-  v == 0;
+  d == 5;
+  v == 3;
 }
 
 finally {
   d >= 30;
-  v == 0;
+  v == 4;
 }

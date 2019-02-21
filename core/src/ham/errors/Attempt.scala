@@ -8,6 +8,11 @@ import scala.annotation.tailrec
 
 sealed abstract class Attempt[+A] {
 
+  def map[B](f: A => B): Attempt[B] = this match {
+    case Attempt.Succ(a) => Attempt.Succ(f(a))
+    case x: Attempt.Fail => x
+  }
+
   def orElse[B >: A](alt: => Attempt[B]): Attempt[B] = this match {
     case succ: Attempt.Succ[A] => succ
     case _                     => alt

@@ -6,6 +6,7 @@ import ham.expr.{Expr, Id, Type}
 import ham.lang.Env
 import ham.state.{State, StateField}
 import ham.typing.Typer
+import hydra.Compiler.{Compilable, ExprCompiler}
 import hydra.optim.{Bridge, DiffFun, DiffFunImpl}
 import hydra.reductions.Reductions
 import hydra.teb.{Band, Problem}
@@ -14,15 +15,16 @@ object Controller {
 
   import ham.prelude.Prelude._
 
-  def constraintToError(constraint: Expr, s: State)(implicit env: Env) = {
+  def constraintToError(constraint: Expr, s: State)(implicit env: Env): Attempt[Compilable] = {
     val tpe              = Typer.typeOf(constraint, env.typeOf)
     val defs: Id => Expr = env.definitionOf(_).unsafeGet
     tpe match {
       case Succ(Bool) =>
         val e = Reductions.bool2err(constraint, Nil, defs)
         ham.errors.attempt {
-          val diff = hydra.Compiler.differentiator(e, s, env.definitionOf(_).toOption)
-          DiffFun(Bridge.identity(s.numFields), new DiffFunImpl(s.numFields, diff))
+          new ExprCompiler(e, env.definitionOf(_).toOption)
+//          val diff = hydra.Compiler.differentiator(e, s, env.definitionOf(_).toOption)
+//          DiffFun(Bridge.identity(s.numFields), new DiffFunImpl(s.numFields, diff))
         }
 
       case Succ(tpe) =>

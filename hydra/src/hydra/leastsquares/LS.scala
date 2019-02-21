@@ -33,7 +33,7 @@ object LS {
 
     def constraintsToFun(constraints: List[Expr]): List[DiffFun] =
       constraints
-        .map(c => Compiler.differentiator(c, stateShape, defs))
+        .map(c => Compiler.differentiatorUnsafe(c, stateShape, defs))
         .map(f => {
           val dfi = new DiffFunImpl(stateShape.numFields, f)
           val df  = new DiffFun(Bridge.identity(stateShape.numFields), dfi)

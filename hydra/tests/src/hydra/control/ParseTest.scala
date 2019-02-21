@@ -25,6 +25,8 @@ object ParseTest extends SimpleTestSuite with TestsMain {
       modExpr <- model.mapErr(x => Expr.fromAST(x, id => syms.get(id)))
     } yield {
 
+      Controller.toTeb(modExpr)
+
       val csts                     = modExpr.constants.map(c => modExpr.moduleID / c.name -> c.value).toMap
       val defs: Id => Option[Expr] = id => csts.get(id).orElse(prelude.mod.definition(id).toOption)
       val constraints              = modExpr.globalConstraints ++ modExpr.initConstraints ++ modExpr.finalConstraints

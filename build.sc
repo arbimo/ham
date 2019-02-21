@@ -14,6 +14,7 @@ object deps {
   val kindProjector = ivy"org.spire-math::kind-projector:0.9.8"
 
   val cats = ivy"org.typelevel::cats-core:1.4.0"
+  val catsCollections = ivy"org.typelevel::cats-collections-core:0.7.0"
   val fastparse = ivy"com.lihaoyi::fastparse:2.1.0"
   val caseApp = ivy"com.github.alexarchambault::case-app:2.0.0-M3"
   val spire = ivy"org.typelevel::spire:0.16.0"
@@ -60,7 +61,7 @@ object script extends HamModule {
 
 object hydra extends HamModule {
   override def moduleDeps = Seq(core, matrix)
-  override def ivyDeps = Agg(cats, fastparse, spire)
+  override def ivyDeps = Agg(cats, catsCollections,  fastparse, spire)
 
   override def mainClass = Some("hydra.Main")
 
