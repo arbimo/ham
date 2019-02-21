@@ -3,7 +3,7 @@ package hydra
 import ham.errors.Attempt
 import ham.expr.{Expr, Id}
 import ham.state.State
-import hydra.compile.FunN
+import hydra.compile.{FunN, Rainier}
 import hydra.optim.{Bridge, DiffFun}
 import spire.algebra._
 import spire.implicits._
@@ -121,7 +121,8 @@ object Compiler {
     def compile(stateReader: Variable => Option[Int], dim: Int): Attempt[DiffFun]
   }
 
-  class ExprCompiler(c: Expr, defs: Id => Option[Expr]) extends Compilable {
+  // todo: currently unused
+  class SpireExprCompiler(c: Expr, defs: Id => Option[Expr]) extends Compilable {
 
     def compile(stateReader: Variable => Option[Int], dim: Int): Attempt[DiffFun] = {
       implicit val jetDim: JetDim = JetDim(dim)
@@ -146,6 +147,29 @@ object Compiler {
         diff = untypedDiff.asInstanceOf[Array[Jet[Double]] => Jet[Double]]
       } yield DiffFun(Bridge.identity(dim), FunN.fromJet(dim, diff))
 
+    }
+  }
+
+  class RainierExprCompiler(c: Expr, defs: Id => Option[Expr]) extends Compilable {
+
+    def compile(stateReader: Variable => Option[Int], dim: Int): Attempt[DiffFun] = {
+      val vars = Array.fill(dim)(new com.stripe.rainier.compute.Variable)
+      val realAttempt = Rainier.compile(c,
+        id => {
+          defs(id) match {
+            case Some(e) =>
+              Some(Right(e))
+
+            case None =>
+            stateReader(StateVariable(id.local))
+              .map(i => Left(vars(i)))
+          }
+        }
+      )
+      realAttempt.map { real =>
+        val funn = Rainier.compile(vars, real)
+        DiffFun(Bridge.identity(dim), funn)
+      }
     }
   }
 }

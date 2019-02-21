@@ -1,56 +1,46 @@
 package hydra.compile
 
-import com.stripe.rainier.core._
 import com.stripe.rainier.compute._
-import spire.math.{Jet, JetDim}
+import ham.expr.{BuiltIn, Expr, Id}
+import ham.prelude.Prelude
 
-object Rainier extends App {
+object Rainier {
 
-  def compile(params: IndexedSeq[Variable], f: Real): FunN = {
-    val grads                                = f.variables.zip(f.gradient).toMap
-    val funs: Array[Array[Double] => Double] = Array.ofDim(params.length + 1)
-    val compiler                             = Compiler.default
-    funs(0) = compiler.compile(params, f)
-    for(i <- params.indices) {
-      val grad = grads.get(params(i)) match {
-        case Some(r) => r
-        case None    => Real.zero
-      }
-      funs(i + 1) = compiler.compile(params, grad)
-    }
-    new FunNExplicit(params.size, funs)
+  def compile(e: Expr, ofSym: Id => Option[Either[Real, Expr]]) = ham.errors.attempt {
+    compileUnsafe(e, ofSym, Nil)
   }
 
-  val three = Real(3)
+  def compileUnsafe(e: Expr, ofSym: Id => Option[Either[Real, Expr]], stack: List[Real]): Real =
+    e match {
+      case ham.expr.Literal(x: Double, Prelude.Real) => Real(x)
+      case ham.expr.Fun(Nil, body)                   => compileUnsafe(body, ofSym, stack)
+      case ham.expr.Fun(_, body)                     => ???
+      case ham.expr.Var(_)                           => ???
+      case ham.expr.Symbol(id) =>
+        ofSym(id) match {
+          case None           => throw ham.errors.error(s"Unknown symbol: $id")
+          case Some(Left(f))  => f
+          case Some(Right(e)) => compileUnsafe(e, ofSym, stack)
+        }
+      case ham.expr.App(fun, arg) =>
+        // place arg on stack
+        val argPE = compileUnsafe(arg, ofSym, stack)
+        compileUnsafe(fun, ofSym, argPE :: stack)
 
-  val x = new Variable
-  val y = new Variable
+      case BuiltIn("real.add", _) => stack(0) + stack(1)
+      case BuiltIn("real.sub", _) => stack(0) - stack(1)
+      case BuiltIn("real.mul", _) => stack(0) * stack(1)
+      case BuiltIn("real.div", _) => stack(0) / stack(1)
+      case BuiltIn("real.max", _) => stack(0) max stack(1)
+      case BuiltIn("real.min", _) => stack(0) min stack(1)
+      case BuiltIn("real.abs", _) => stack(0).abs
 
-  val f = x.max(0) //* (y + 1)
+    }
 
-  f.gradient
-  f.writeGraph("/tmp/f")
-  f.gradient.head.writeGraph("/tmp/df")
-
-  val eval = new Evaluator(Map(x -> 3.0, y -> 4.0))
-  println(eval.toDouble(f))
-  println(List(x, y))
-  println(f.variables)
-  println(f)
-  f.gradient.foreach(df => {
-    println(df)
-    println(eval.toDouble(df))
-  })
-
-  val fc = Compiler.default.compile(List(x, y), f)
-  println(fc.apply(Array(3.0, 4.0)))
-  val grads = Compiler.withGradient("fc", f, List(x, y))
-  val dfc   = Compiler.default.compile(List(x, y), grads)
-
-  val fn  = compile(Array(x), f)
-  val fn2 = new NumericDiff(fc, 1)
-  val X   = Array(3.1, 4.0)
-  println(fn.eval(X).mkString(", "))
-  println(fn2.eval(X).mkString(", "))
+  def compile(params: IndexedSeq[Variable], f: Real): FunN = {
+    val compiler = Compiler.default
+    val compiled = compiler.compile(params, f)
+    FunN.byNumericDiff(params.size, compiled)
+  }
 
 }
