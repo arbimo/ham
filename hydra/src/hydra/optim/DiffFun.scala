@@ -1,7 +1,6 @@
 package hydra.optim
 
-import spire.math.{Jet, JetDim}
-import spire.implicits._
+import hydra.compile.FunN
 
 /**
   * A partial gradient.
@@ -12,33 +11,19 @@ final class Grad(val vars: Array[Int], val derivs: Array[Double]) {
   def length: Int = vars.length
 }
 
-case class DiffFun(bridge: Bridge, impl: DiffFunImpl) {
+case class DiffFun(bridge: Bridge, impl: FunN) {
+  require(impl.inputSize + 1 == impl.outputSize)
+  require(bridge.outArity == impl.inputSize)
 
   def eval(xs: Array[Double]): Double = {
-    impl.eval(bridge.adapt(xs))
+    impl.evalOne(bridge.adapt(xs), 0)
   }
 
   def diff(xs: Array[Double]): Grad = {
-    val diff = impl.diff(bridge.adapt(xs))
+    val diff = impl.evalRange(bridge.adapt(xs), 1, impl.outputSize - 1)
     assert(diff.length == bridge.outArity)
     new Grad(bridge.backward, diff)
   }
-
-}
-
-class DiffFunImpl(val arity: Int, f: Array[Jet[Double]] => Jet[Double]) {
-
-  private implicit val dim: JetDim = JetDim(arity)
-
-  private def jetInputs(xs: Array[Double]): Array[Jet[Double]] = {
-    xs.indices.iterator
-      .map(i => Jet(xs(i), i))
-      .toArray
-  }
-
-  def jet(xs: Array[Double]): Jet[Double]    = f(jetInputs(xs))
-  def eval(xs: Array[Double]): Double        = jet(xs).real
-  def diff(xs: Array[Double]): Array[Double] = jet(xs).infinitesimal
 
 }
 

@@ -3,7 +3,8 @@ package hydra
 import ham.errors.Attempt
 import ham.expr.{Expr, Id}
 import ham.state.State
-import hydra.optim.{Bridge, DiffFun, DiffFunImpl}
+import hydra.compile.FunN
+import hydra.optim.{Bridge, DiffFun}
 import spire.algebra._
 import spire.implicits._
 import spire.math._
@@ -143,7 +144,7 @@ object Compiler {
       for {
         untypedDiff <- differentiator
         diff = untypedDiff.asInstanceOf[Array[Jet[Double]] => Jet[Double]]
-      } yield DiffFun(Bridge.identity(dim), new DiffFunImpl(dim, diff))
+      } yield DiffFun(Bridge.identity(dim), FunN.fromJet(dim, diff))
 
     }
   }

@@ -7,6 +7,7 @@ import ham.errors.Attempt
 import ham.expr.{Expr, Id}
 import ham.prelude.Prelude
 import ham.state.{State, StateField}
+import hydra.compile.FunN
 import hydra.optim.DiffFun
 
 import scala.collection.immutable.ListMap
@@ -35,7 +36,7 @@ object LS {
       constraints
         .map(c => Compiler.differentiatorUnsafe(c, stateShape, defs))
         .map(f => {
-          val dfi = new DiffFunImpl(stateShape.numFields, f)
+          val dfi = FunN.fromJet(stateShape.numFields, f)
           val df  = new DiffFun(Bridge.identity(stateShape.numFields), dfi)
           df
         })

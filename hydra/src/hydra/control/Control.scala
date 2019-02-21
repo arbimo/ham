@@ -7,7 +7,6 @@ import ham.lang.Env
 import ham.state.{State, StateField}
 import ham.typing.Typer
 import hydra.Compiler.{Compilable, ExprCompiler}
-import hydra.optim.{Bridge, DiffFun, DiffFunImpl}
 import hydra.reductions.Reductions
 import hydra.teb.{Band, Problem}
 
