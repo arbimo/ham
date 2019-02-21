@@ -18,6 +18,7 @@ object deps {
   val fastparse = ivy"com.lihaoyi::fastparse:2.1.0"
   val caseApp = ivy"com.github.alexarchambault::case-app:2.0.0-M3"
   val spire = ivy"org.typelevel::spire:0.16.0"
+  val rainierCore = ivy"com.stripe::rainier-core:0.2.1"
 
   val minitest = ivy"io.monix::minitest:2.3.2"
   val minitestLaws = ivy"io.monix::minitest-laws:2.3.2"
@@ -61,9 +62,9 @@ object script extends HamModule {
 
 object hydra extends HamModule {
   override def moduleDeps = Seq(core, matrix)
-  override def ivyDeps = Agg(cats, catsCollections,  fastparse, spire)
+  override def ivyDeps = Agg(cats, catsCollections,  fastparse, spire, rainierCore)
 
-  override def mainClass = Some("hydra.Main")
+  override def mainClass = Some("hydra.compile.Rainier")
 
   object tests extends MiniTests
 }
