@@ -40,15 +40,19 @@ final class FunNExplicit(inputSize: Int, parts: Array[Array[Double] => Double])
 final class NumericDiff(f: Array[Double] => Double, numParams: Int)
     extends FunN(numParams, numParams + 1) {
   override def evalOne(input: Array[Double], n: Int): Double = {
-    val fx = f(input)
     if(n == 0) {
-      fx
+      f(input)
     } else {
+      // store to make sure me do not modify it due to rounding errors
+      val x  = input(n - 1)
       val dx = 10E-6
-      input(n - 1) += dx
-      val fdx  = f(input)
-      val grad = (fdx - fx) / dx
-      input(n - 1) -= dx
+      input(n - 1) = x + dx
+      val f2 = f(input)
+      input(n - 1) = x - dx
+      val f1   = f(input)
+      val grad = (f2 - f1) / (dx * 2)
+      // restore input vector
+      input(n - 1) = x
       grad
     }
   }
