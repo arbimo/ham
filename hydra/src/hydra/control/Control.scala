@@ -59,9 +59,11 @@ object Controller {
         defs(id).toAttemptMsg(s"Unknown symbol $id")
     }
 
-    val startConstraints  = modExpr.initConstraints ++ modExpr.globalConstraints
+    // start and end constraints will be mixed with the global constraints in the middle
+    // because the are on instantaneous bands that overlap with the previous/next ones
+    val startConstraints  = modExpr.initConstraints
     val middleConstraints = modExpr.globalConstraints
-    val endConstraints    = modExpr.finalConstraints ++ modExpr.globalConstraints
+    val endConstraints    = modExpr.finalConstraints
 
     def constraintsToErrors(constraints: List[Expr]): Attempt[List[Compilable]] =
       constraints.traverse(constraintToError(_, schema, env))
