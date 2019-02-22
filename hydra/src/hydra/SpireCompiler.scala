@@ -1,15 +1,19 @@
 package hydra
 
-import ham.errors.Attempt
+import cats.Applicative
+import com.stripe.rainier.compute
+import ham.errors._
 import ham.expr.{Expr, Id}
 import ham.state.State
+import hydra.SpireCompiler.{Compilable, RainierExprCompiler}
 import hydra.compile.{FunN, Rainier}
 import hydra.optim.{Bridge, DiffFun}
 import spire.algebra._
 import spire.implicits._
 import spire.math._
+import com.stripe.rainier.{compute => rainier}
 
-object Compiler {
+object SpireCompiler {
 
   implicit val jetDoubleOrder = new Order[Jet[Double]] {
     override def compare(x: Jet[Double], y: Jet[Double]): Int =
@@ -121,56 +125,65 @@ object Compiler {
     def compile(stateReader: Variable => Option[Int], dim: Int): Attempt[DiffFun]
   }
 
-  // todo: currently unused
-  class SpireExprCompiler(c: Expr, defs: Id => Option[Expr]) extends Compilable {
 
-    def compile(stateReader: Variable => Option[Int], dim: Int): Attempt[DiffFun] = {
-      implicit val jetDim: JetDim = JetDim(dim)
-      val differentiator = Compiler.compile[Array[Jet[Double]], Expr](
-        c,
-        id => {
-          defs(id) match {
-            case Some(e) =>
-              Some(Right(e))
-
-            case None =>
-            stateReader(StateVariable(id.local))
-              .map(i => Left((values: Array[Jet[Double]]) => values(i)))
-          }
-        },
-        name => builtIns[Jet[Double]](name), {
-          case d: Double => Jet(d)
-        }
-      )
-      for {
-        untypedDiff <- differentiator
-        diff = untypedDiff.asInstanceOf[Array[Jet[Double]] => Jet[Double]]
-      } yield DiffFun(Bridge.identity(dim), FunN.fromJet(dim, diff))
-
-    }
+  object RainierExprCompiler {
   }
 
-  class RainierExprCompiler(c: Expr, defs: Id => Option[Expr]) extends Compilable {
+}
 
-    def compile(stateReader: Variable => Option[Int], dim: Int): Attempt[DiffFun] = {
-      val vars = Array.fill(dim)(new com.stripe.rainier.compute.Variable)
-      val realAttempt = Rainier.compile(c,
-        id => {
-          defs(id) match {
-            case Some(e) =>
-              Some(Right(e))
+object RainierCompiler {
+  /** Global cache of rainier variables.
+    * This is used to make sure that refering to ith variable when compiling refers to the
+    * same variable in independently compile expressions
+    * */ 
+  private val vars = Array.fill(1000)(new rainier.Variable)
+  private def getVariable(i: Int): rainier.Variable = vars(i)
+  private def getVariableVector(num: Int): Array[rainier.Variable] = vars.take(num)
 
-            case None =>
-            stateReader(StateVariable(id.local))
-              .map(i => Left(vars(i)))
-          }
-        }
-      )
-      realAttempt.map { real =>
-        val funn = Rainier.compile(vars, real)
+  type ToReal = (Variable => Option[Int]) => Attempt[compute.Real]
+
+  def compilable(x: ToReal): Compilable =
+    (binds: Variable => Option[Int],                          dim: Int) => compile(x, binds, dim)
+
+
+  def compile(x: ToReal, binds: Variable => Option[Int], dim: Int): Attempt[DiffFun] = {
+      x(binds).map { real =>
+        // todo: change the bridge to only use variables we are interested in
+        val funn = Rainier.compile(getVariableVector(dim), real)
         DiffFun(Bridge.identity(dim), funn)
       }
     }
+
+  def toReal(defs: Id => Option[Expr])(c: Expr): ToReal = new ExprCompiler(c, defs)
+  def svInCurrentState(name: String): ToReal = (binds: Variable => Option[Int]) =>
+    binds(StateVariable(name))
+      .map(i => getVariable(i))
+      .toAttemptMsg(s"Non accessible in next state: $name")
+
+  def svInNextState(name: String): ToReal = (binds: Variable => Option[Int]) =>
+      binds(StateVariableInNextState(name))
+        .map(i => getVariable(i))
+        .toAttemptMsg(s"Non accessible in next state: $name")
+  def dt: ToReal = (binds: Variable => Option[Int]) =>
+      binds(Dt)
+        .map(i => getVariable(i))
+        .toAttemptMsg("Dt not accessible")
+
+  private class ExprCompiler(c: Expr, defs: Id => Option[Expr]) extends ToReal {
+
+    def apply(stateReader: Variable => Option[Int]): Attempt[rainier.Real] =
+      Rainier.compile(c,
+        id => {
+          defs(id) match {
+            case Some(e) =>
+              Some(Right(e))
+
+            case None =>
+            stateReader(StateVariable(id.local))
+              .map(i => Left(getVariable(i)))
+          }
+        }
+      )
   }
 }
 

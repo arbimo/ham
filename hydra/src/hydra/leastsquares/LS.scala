@@ -1,7 +1,7 @@
 package hydra.leastsquares
 
 import cats.implicits._
-import hydra.Compiler
+import hydra.SpireCompiler
 import hydra.optim._
 import ham.errors.Attempt
 import ham.expr.{Expr, Id}
@@ -34,7 +34,7 @@ object LS {
 
     def constraintsToFun(constraints: List[Expr]): List[DiffFun] =
       constraints
-        .map(c => Compiler.differentiatorUnsafe(c, stateShape, defs))
+        .map(c => SpireCompiler.differentiatorUnsafe(c, stateShape, defs))
         .map(f => {
           val dfi = FunN.fromJet(stateShape.numFields, f)
           val df  = new DiffFun(Bridge.identity(stateShape.numFields), dfi)

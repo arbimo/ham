@@ -5,7 +5,7 @@ import cats.collections.Discrete
 import cats.implicits._
 import ham.errors._
 import ham.state.State
-import hydra.Compiler.Compilable
+import hydra.SpireCompiler.Compilable
 import hydra.{StateVariable, Variable}
 import hydra.optim._
 import spire.math.Interval
