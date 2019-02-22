@@ -13,6 +13,11 @@ sealed abstract class Attempt[+A] {
     case x: Attempt.Fail => x
   }
 
+  def foreach(f: A => Unit): Unit = this match {
+    case Attempt.Succ(a) => f(a)
+    case _               =>
+  }
+
   def orElse[B >: A](alt: => Attempt[B]): Attempt[B] = this match {
     case succ: Attempt.Succ[A] => succ
     case _                     => alt
