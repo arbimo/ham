@@ -21,6 +21,7 @@ package object algebra {
   }
 
   implicit def funField[A, B](implicit F: Field[B]): Field[A => B] = new Field[A => B] {
+    override def fromDouble(a: Double): A => B       = _ => F.fromDouble(a)
     override def negate(x: A => B): A => B           = a => F.negate(x(a))
     override def times(x: A => B, y: A => B): A => B = a => F.times(x(a), y(a))
     override def zero: A => B                        = _ => F.zero
@@ -31,6 +32,7 @@ package object algebra {
 
   implicit def appField[F[_], A](implicit F: Field[A], A: Applicative[F]): Field[F[A]] =
     new Field[F[A]] {
+      override def fromDouble(a: Double): F[A]   = A.pure(F.fromDouble(a))
       override def negate(x: F[A]): F[A]         = A.map(x)(F.negate)
       override def times(x: F[A], y: F[A]): F[A] = A.map2(x, y)(F.times)
       override def zero: F[A]                    = A.pure(F.zero)
