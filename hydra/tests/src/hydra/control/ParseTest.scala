@@ -31,13 +31,6 @@ object ParseTest extends SimpleTestSuite with TestsMain {
       val defs: Id => Option[Expr] = id => csts.get(id).orElse(prelude.mod.definition(id).toOption)
       val constraints              = modExpr.globalConstraints ++ modExpr.initConstraints ++ modExpr.finalConstraints
 
-      constraints.foreach { c =>
-        println()
-        println(c)
-        val e = Reductions.bool2err(c, Nil, defs(_).get)
-        println(e)
-      }
-
       model
     }
 

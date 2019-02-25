@@ -1,7 +1,7 @@
 
+fluent  d: Real;
+fluent  v: Real;
 
-fluent d: Real;
-fluent v: Real;
 control a: Real;
 
 dynamics {
@@ -10,16 +10,17 @@ dynamics {
 }
 
 subject_to {
+  v >= 0;
   v <= 100 || a <= 0;
   abs(a) <= 1;
 }
 
 initially {
-  d == 5;
-  v == 3;
+  d == 0;
+  v == 0;
 }
 
 finally {
   d >= 30;
-  v == 4;
+  v == 0;
 }

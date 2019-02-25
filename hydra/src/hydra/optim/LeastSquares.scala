@@ -35,7 +35,7 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
   }
 
   def solveLinear: RWMemory = {
-    val zeroMem = Array.fill[Double](dim)(0) //new MemImpl(norm = _ => NoNormalize)
+    val zeroMem = Array.fill[Double](dim)(0.1) //new MemImpl(norm = _ => NoNormalize)
     val J       = jacobian(zeroMem)
 //    J.print()
 
@@ -59,12 +59,16 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
 //      rhs.print()
 
     // solution of J.T * J * sol = -J.T * x
-    val sol =
+    val update =
       Try(lhs.solveCholSol(rhs.toVector))
         .orElse(Try(lhs.solveQR(rhs.toVector)))
         .getOrElse(throw new RuntimeException("OOPS"))
+
+    val sol = update.zipWithIndex
+      .map { case (x, i) => zeroMem(i) + (if(x.isNaN) 0 else x) }
     println("\nSol: "); Matrix.fromArray(sol).print()
-    sol.map(x => if(x.isNaN) 0 else x)
+    sol
+
 //    zeroMem.load(sol)
 //    zeroMem
 //    println("\nRes: "); Matrix.fromArray(ls.evalResiduals(mem).toArray).print()

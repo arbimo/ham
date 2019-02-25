@@ -7,9 +7,7 @@ import ham.lang.Env
 import ham.state.{State, StateField}
 import ham.typing.Typer
 import hydra.RainierCompiler
-import hydra.SpireCompiler.{Compilable, RainierExprCompiler}
-import hydra.algebra.Num
-import hydra.optim.DiffFun
+import hydra.SpireCompiler.Compilable
 import hydra.reductions.Reductions
 import hydra.teb.{Band, Problem}
 
@@ -91,8 +89,8 @@ object Controller {
     }
 
     // todo: remove when finalized
-    pb.foreach(_.solveLinear)
-
+//    pb.foreach(_.solveLinear)
+    pb.foreach(_.solve)
     pb
   }
 
