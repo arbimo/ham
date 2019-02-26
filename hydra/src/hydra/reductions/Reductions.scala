@@ -33,6 +33,15 @@ object Reductions {
         val a = stack(0)
         val b = stack(1)
         unsafeBuiltIn("-")(a, b)
+      case BuiltIn("real.lt", _) =>
+        val lhs = stack(0)
+        val rhs = stack(1)
+        // retract small epsilon to difference
+        val diff = unsafeBuiltIn("-")(unsafeBuiltIn("-")(lhs, rhs), Literal(1e-8, Real))
+        unsafeBuiltIn("max")(
+          diff,
+          Literal(0.0, Real)
+        )
       case BuiltIn("real.leq", _) =>
         val lhs = stack(0)
         val rhs = stack(1)
