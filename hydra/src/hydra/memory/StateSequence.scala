@@ -49,12 +49,13 @@ abstract class DoubleLike {
 object DoubleLike {
 
   object OfDouble extends DoubleLike {
-    override val default: Double               = 0
+    // TODO: least squares is quite dependent on this parameters, due to being nulls at some points
+    override val default: Double               = 0.5
     override def normalize(in: Double): Double = in
   }
   object StrictlyPositive extends DoubleLike {
     private val epsilon: Double  = 1e-08
-    override val default: Double = epsilon
+    override val default: Double = 1
     override def normalize(in: Double): Double = {
       if(in > 0)
         in
