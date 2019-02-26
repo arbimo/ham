@@ -2,8 +2,9 @@ package hydra.teb
 
 import ham.state.State
 import cats.implicits._
+import hydra.memory.StateSequence
 
-class Solution(state: State, htime: HybridTime[DiscreteTime, Int], evolution: Array[Double]) {
+class Solution(state: State, htime: HybridTime[DiscreteTime, Int], evolution: StateSequence) {
 
   def format(sep: String = " "): String = {
     val sb                              = new StringBuilder

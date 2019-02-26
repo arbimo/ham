@@ -6,7 +6,7 @@ import ham.errors._
 import ham.state.State
 import hydra.SpireCompiler.Compilable
 import hydra._
-import hydra.memory.ArraySlice
+import hydra.memory.{ArraySlice, DoubleLike, StateSequence, StateWriter}
 import hydra.optim._
 
 import scala.annotation.tailrec
@@ -25,6 +25,9 @@ object Band {
 class Problem(state: State, bands: Seq[Band]) { problem =>
   require(bands.nonEmpty)
   val schema = new hydra.memory.Schema(state.numFields)
+  val writer = new StateWriter(
+    (state.fields.map(_ => DoubleLike.OfDouble).toSeq :+ DoubleLike.StrictlyPositive).toArray
+  )
 
   val layout: Variable => Option[Int] = {
     case StateVariable(name)            => state.offset(name)
@@ -99,9 +102,9 @@ class Problem(state: State, bands: Seq[Band]) { problem =>
   type HTime = HybridTime[DiscreteTime, Int]
 
   sealed trait RunResult
-  case class Success(htime: HTime, vals: ArraySlice) extends RunResult
-  case class Ran(htime: HTime, vals: ArraySlice)     extends RunResult
-  case class Failed()                                extends RunResult
+  case class Success(htime: HTime, vals: StateSequence) extends RunResult
+  case class Ran(htime: HTime, vals: StateSequence)     extends RunResult
+  case class Failed()                                   extends RunResult
 
   sealed trait Policy {
     def makeRun(previous: Ran): RunResult
@@ -124,7 +127,7 @@ class Problem(state: State, bands: Seq[Band]) { problem =>
     def makeRun(previous: Ran): RunResult = {
       val base     = previous.vals
       val prevN    = previous.htime.continuousTimes.end + 1
-      val dtRatio  = schema.averageTime(base) / targetDt
+      val dtRatio  = schema.averageTime(base.slice) / targetDt
       val desiredN = (prevN * dtRatio).toInt
       if(prevN == desiredN || (dtRatio - 1).abs < 0.01) {
         Success(previous.htime, previous.vals)
@@ -136,13 +139,16 @@ class Problem(state: State, bands: Seq[Band]) { problem =>
 
         // produce new solution shape and populate it from the incumbent
         val curr = schema.init(htime.continuousTimes.end + 1)
-        schema.writeHomogenized(base, curr)
+        schema.writeHomogenized(ArraySlice(base.raw), curr)
+
+        val incumbent = writer.init(curr.mem)
 
         // run least squares
         val constraints = this.constraintsWithTime(htime)
-        val ls          = new LeastSquares(constraints, curr.length)
-        val stats       = ls.lmIteration(curr.mem, 20)
-        Ran(htime, curr)
+        val ls          = new LeastSquares(constraints, curr.length, writer)
+
+        val stats = ls.lmIteration(incumbent, 20)
+        Ran(htime, incumbent)
       }
     }
 
@@ -150,12 +156,12 @@ class Problem(state: State, bands: Seq[Band]) { problem =>
 
   def solve(targetDt: Double): Attempt[Solution] = {
     val policy = FitTime(targetDt)
-    val base   = Ran(time(1), schema.init(2, 10))
+    val base   = Ran(time(1), writer.init((state.numFields + 1) * 3))
 
     @tailrec def go(previous: Ran): Attempt[Solution] = {
       policy.makeRun(previous) match {
         case Success(htime, vals) =>
-          ham.errors.success(new Solution(state, htime, vals.mem))
+          ham.errors.success(new Solution(state, htime, vals))
         case Failed()             => ham.errors.failure("Failed")
         case x @ Ran(htime, vals) =>
           // method was run repeat until we get a success or failure

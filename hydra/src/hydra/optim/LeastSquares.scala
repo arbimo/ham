@@ -1,10 +1,11 @@
 package hydra.optim
 
 import ham.matrix._
+import hydra.memory.StateWriter
 
 import scala.util.Try
 
-class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
+class LeastSquares(allResiduals: Seq[DiffFun], dim: Int, writer: StateWriter) {
 
   def activeResiduals(mem: RMemory): Seq[DiffFun] =
     allResiduals //.filter(_.eval(mem) >= 1e-4)
@@ -12,14 +13,14 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
 //  val numVars: Int = residuals.map(_.params.max).max
 
   def evalResiduals(memory: RMemory): Seq[R] = {
-    activeResiduals(memory).map(_.eval(memory))
+    activeResiduals(memory).map(_.eval(memory.raw))
   }
 
   def jacobian(memory: RMemory): Matrix = {
     val jac = new MatrixFactory(activeResiduals(memory).size, dim)
 //    println("\nGradients")
     for((e, i) <- activeResiduals(memory).zipWithIndex) {
-      val gradj = e.diff(memory)
+      val gradj = e.diff(memory.raw)
 //      println(gradj.vars.zip(gradj.derivs).mkString("\t"))
 //      println(gradj.mkString("\t"))
       var x = 0
@@ -35,12 +36,12 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
   }
 
   def solveLinear: RWMemory = {
-    val zeroMem = Array.fill[Double](dim)(0.1) //new MemImpl(norm = _ => NoNormalize)
-    val J       = jacobian(zeroMem)
+    val incumbent = writer.init(dim)
+    val J         = jacobian(incumbent)
 //    J.print()
 
     // residuals at 0
-    val x = evalResiduals(zeroMem).toArray
+    val x = evalResiduals(incumbent).toArray
 
 //    println("\n Residuals at 0")
 //    println(x.toSeq)
@@ -64,14 +65,8 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
         .orElse(Try(lhs.solveQR(rhs.toVector)))
         .getOrElse(throw new RuntimeException("OOPS"))
 
-    val sol = update.zipWithIndex
-      .map { case (x, i) => zeroMem(i) + (if(x.isNaN) 0 else x) }
-//    println("\nSol: "); Matrix.fromArray(sol).print()
-    sol
-
-//    zeroMem.load(sol)
-//    zeroMem
-//    println("\nRes: "); Matrix.fromArray(ls.evalResiduals(mem).toArray).print()
+    incumbent.incrementGuardedNaN(update)
+    incumbent
   }
 
   def gaussNewtonIteration(mem: RWMemory): Unit = {
@@ -153,7 +148,7 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
         !d.isNaN && !d.isInfinity
       }
       val safeUpdate = update.map(v => if(v.isNaN) 0.0 else v)
-      for(i <- mem.indices) mem(i) += safeUpdate(i)
+      mem.incrementGuardedNaN(update)
 //      mem.add(safeUpdate)
       val newResiduals = evalResiduals(mem).toArray
       val newChi       = newResiduals.map(x => x * x).sum
@@ -171,7 +166,7 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
       } else {
         lambda *= ni
         ni *= 2
-        for(i <- lastGood.indices) mem(i) = lastGood(i)
+        mem.load(lastGood.raw)
 //        mem.load(lastGood)
         Stats.numFailed += 1
 //        println(s"Deterioration: $lastChi -> $newChi       -- lambda:  $lambda")

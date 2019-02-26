@@ -8,6 +8,7 @@ import ham.expr.{Expr, Id}
 import ham.prelude.Prelude
 import ham.state.{State, StateField}
 import hydra.compile.FunN
+import hydra.memory.{DoubleLike, StateWriter}
 import hydra.optim.DiffFun
 
 import scala.collection.immutable.ListMap
@@ -45,9 +46,10 @@ object LS {
   }
 
   def solveLinear(mod: LSModel[Expr]): Attempt[Map[String, Double]] = {
+    val writer = StateWriter(DoubleLike.OfDouble)
     extract(mod).map {
       case (stateShape, errors) =>
-        val ls  = new LeastSquares(errors, stateShape.numFields)
+        val ls  = new LeastSquares(errors, stateShape.numFields, writer)
         val sol = ls.solveLinear
 
         stateShape.fields.zipWithIndex.foldLeft(ListMap.empty[String, Double]) {
@@ -57,11 +59,12 @@ object LS {
   }
 
   def solveNonlinear(mod: LSModel[Expr]): Attempt[Map[String, Double]] = {
+    val writer = StateWriter(DoubleLike.OfDouble)
     extract(mod).map {
       case (stateShape, errors) =>
-        val ls = new LeastSquares(errors, stateShape.numFields)
+        val ls = new LeastSquares(errors, stateShape.numFields, writer)
 
-        val s0 = Array.fill[Double](stateShape.numFields)(0.0001)
+        val s0 = writer.init(stateShape.numFields)
         ls.lmIteration(s0, 100)
 
         val sol = s0
