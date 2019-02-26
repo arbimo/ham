@@ -26,11 +26,12 @@ object Parser {
   def controlParser[_: P]: P[Control] = P("control" ~/ ident ~ ":" ~ ident ~ ";").map {
     case (id, tpe) => Control(id, makeType(tpe))
   }
-  def dynamicParser[_: P]: P[Dynamic[AST]] = P("dot" ~ "(" ~ ident ~ ")" ~ "=" ~ expr ~ ";").map {
-    case (id, value) => Dynamic(id, value)
-  }
+  def dynamicParser[_: P]: P[Dynamic[AST]] =
+    P("dot" ~/ "(" ~/ ident ~/ ")" ~/ "=" ~/ expr ~ ";").map {
+      case (id, value) => Dynamic(id, value)
+    }
   def dynamicsParser[_: P]: P[Dynamics[AST]] =
-    P("dynamics" ~ "{" ~ dynamicParser.rep ~ "}").map(l => Dynamics(l.toList))
+    P("dynamics" ~/ "{" ~/ dynamicParser.rep ~ "}").map(l => Dynamics(l.toList))
 
   def constraintsParser[_: P](sectionName: String): P[Constraints[AST]] =
     P(sectionName ~/ "{" ~ (expr ~ ";").rep ~ "}").map(l => Constraints(l.toList))
