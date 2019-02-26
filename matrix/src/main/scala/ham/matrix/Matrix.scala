@@ -9,7 +9,6 @@ class MatrixFactory(m: Int, n: Int) {
   private def merge(i: Int, j: Int): Long = i.toLong + (j.toLong << 32)
 
   def update(i: Int, j: Int, value: Double): Unit = {
-
     Dcs_entry.cs_entry(M, i, j, value)
   }
 
