@@ -1,15 +1,13 @@
 package hydra.teb
 
 import cats.{collections, Applicative}
-import cats.collections.Discrete
 import cats.implicits._
-import cats.kernel.Order
 import ham.errors._
 import ham.state.State
 import hydra.SpireCompiler.Compilable
-import hydra.{Dt, StateVariable, StateVariableInNextState, Variable}
+import hydra._
+import hydra.memory.ArraySlice
 import hydra.optim._
-import spire.math.Interval
 
 import scala.annotation.tailrec
 
@@ -24,8 +22,9 @@ object Band {
 
 }
 
-class Problem(state: State, bands: Seq[Band]) {
+class Problem(state: State, bands: Seq[Band]) { problem =>
   require(bands.nonEmpty)
+  val schema = new hydra.memory.Schema(state.numFields)
 
   val layout: Variable => Option[Int] = {
     case StateVariable(name)            => state.offset(name)
@@ -33,21 +32,24 @@ class Problem(state: State, bands: Seq[Band]) {
     case StateVariableInNextState(name) => state.offset(name).map(_ + state.numFields + 1)
   }
 
-  def constraintsOnBand(
-      b: Band,
-      layout: Variable => Option[Int]): Attempt[(List[DiffFun], List[DiffFun])] = {
-    val instantaneousLayout: Variable => Option[Int] = {
-      case x: StateVariable => layout(x)
-      case _                => None
+  val constraintsPerBand: Array[(List[DiffFun], List[DiffFun])] = {
+    def constraintsOnBand(
+        b: Band,
+        layout: Variable => Option[Int]): Attempt[(List[DiffFun], List[DiffFun])] = {
+      val instantaneousLayout: Variable => Option[Int] = {
+        case x: StateVariable => layout(x)
+        case _                => None
+      }
+      val inst = b.constraints.toList
+        .traverse(_.compile(instantaneousLayout, state.numFields))
+      val dyns: Attempt[List[DiffFun]] = b match {
+        case Band.Instantaneous(_) => Succ(Nil)
+        case Band.Durative(_, xs) =>
+          xs.toList.traverse(_.compile(layout, state.numFields * 2 + 1))
+      }
+      Applicative[Attempt].product(inst, dyns)
     }
-    val inst = b.constraints.toList
-      .traverse(_.compile(instantaneousLayout, state.numFields))
-    val dyns: Attempt[List[DiffFun]] = b match {
-      case Band.Instantaneous(_) => Succ(Nil)
-      case Band.Durative(_, xs) =>
-        xs.toList.traverse(_.compile(layout, state.numFields * 2 + 1))
-    }
-    Applicative[Attempt].product(inst, dyns)
+    bands.toList.traverse(b => constraintsOnBand(b, layout)).unsafeGet.toArray
   }
 
   def time(internalOfNonInstantaneous: Int): HybridTime[DiscreteTime, Int] =
@@ -74,90 +76,92 @@ class Problem(state: State, bands: Seq[Band]) {
         collections.Range(0, timesOf(discreteTimes.end).end)
     }
 
+  /** Specializes a given function expressed on the first state to apply to an arbitrary state */
   def specialize(diffFun: DiffFun, continuousTime: Int): DiffFun = {
     // state size with a space left for time delay
     val stateSize = state.numFields + 1
     DiffFun(diffFun.bridge.shiftRight(continuousTime * stateSize), diffFun.impl)
   }
 
-  def format(sol: Array[Double], htime: HybridTime[DiscreteTime, Int]): String = {
-    val sb        = new StringBuilder
-    val stateSize = state.numFields + 1
-    for(ctime <- htime.continuousTimes) {
-      val start = ctime * stateSize
-      val end   = (ctime + 1) * stateSize
-
-      sb.append(sol.slice(start, end).map("%1.2f".format(_)).mkString("\t"))
-      sb.append("\n")
-    }
-    sb.toString()
-  }
-
-  def solve: Attempt[RMemory] = {
-    val htime = time(5)
-
-    val x = htime.discreteTimes.toList
-      .traverse(dt =>
-        constraintsOnBand(bands(dt.i), layout).map {
+  def constraints(htime: HybridTime[DiscreteTime, Int]) = {
+    htime.discreteTimes.toList
+      .flatMap(dt =>
+        constraintsPerBand(dt.i) match {
           case (insts, dyns) =>
-            val ctimes = htime.timesOf(dt).toList
-            println(ctimes)
+            val ctimes     = htime.timesOf(dt).toList
             val instaneous = ctimes.map(ctime => insts.map(specialize(_, ctime)))
             val dynamics   = ctimes.dropRight(1).map(ctime => dyns.map(specialize(_, ctime)))
             instaneous ++ dynamics
       })
-      .map(_.flatten.flatten)
-    val numVariables = (htime.continuousTimes.end + 1) * (state.numFields + 1)
-    println("")
-    x.map { dfs =>
-      val ls    = new LeastSquares(dfs, numVariables)
-      val sol   = Array.fill[Double](numVariables)(0.1)
-      val stats = ls.lmIteration(sol, 1000)
-//      val sol = ls.solveLinear
-      println(s"Stats: ${stats}")
-      println(format(sol, htime))
-      sol
+      .flatten
+  }
+
+  type HTime = HybridTime[DiscreteTime, Int]
+
+  sealed trait RunResult
+  case class Success(htime: HTime, vals: ArraySlice) extends RunResult
+  case class Ran(htime: HTime, vals: ArraySlice)     extends RunResult
+  case class Failed()                                extends RunResult
+
+  sealed trait Policy {
+    def makeRun(previous: Ran): RunResult
+  }
+  case class FitTime(targetDt: Double) {
+
+    /** Generic constraint to apply on all Dt variables. */
+    private val onDts: DiffFun = {
+      import hydra.algebra._
+      val N      = Num[RainierCompiler.ToReal]
+      val toReal = N.minus(RainierCompiler.dt, N.fromDouble(targetDt))
+      RainierCompiler.compilable(toReal).compile(layout, state.numFields + 1).unsafeGet
+    }
+    private def constraintsWithTime(htime: HTime) = {
+      problem.constraints(htime) ++ htime.continuousTimes.toList
+        .dropRight(1)
+        .map(i => specialize(onDts, i))
+    }
+
+    def makeRun(previous: Ran): RunResult = {
+      val base     = previous.vals
+      val prevN    = previous.htime.continuousTimes.end + 1
+      val dtRatio  = schema.averageTime(base) / targetDt
+      val desiredN = (prevN * dtRatio).toInt
+      if(prevN == desiredN || (dtRatio - 1).abs < 0.01) {
+        Success(previous.htime, previous.vals)
+      } else {
+        // compute the next number of states
+        val up    = math.min(desiredN, prevN * 2)
+        val n     = math.max(math.max(prevN / 2, up), 2)
+        val htime = time(n)
+
+        // produce new solution shape and populate it from the incumbent
+        val curr = schema.init(htime.continuousTimes.end + 1)
+        schema.writeHomogenized(base, curr)
+
+        // run least squares
+        val constraints = this.constraintsWithTime(htime)
+        val ls          = new LeastSquares(constraints, curr.length)
+        val stats       = ls.lmIteration(curr.mem, 20)
+        Ran(htime, curr)
+      }
     }
 
   }
 
-//  def solveLinear: Unit = {
-//
-//    val ls  = new LeastSquares(constraints.unsafeGet, numVars)
-//    val res = ls.solveLinear
-//    println(res.mkString(", "))
-//    for(si <- bands.indices) {
-//      for(fi <- 0 until state.numFields) {
-//        println(state.fields.toArray.apply(fi).name + ": " + res(si * state.numFields + fi))
-//      }
-//    }
-//  }
+  def solve(targetDt: Double): Attempt[Solution] = {
+    val policy = FitTime(targetDt)
+    val base   = Ran(time(1), schema.init(2, 10))
 
-}
-
-class DiscreteTime(val i: Int) extends AnyVal {
-  def succ: DiscreteTime = new DiscreteTime(i + 1)
-  def pred: DiscreteTime = new DiscreteTime(i - 1)
-
-  def to(last: DiscreteTime): Iterator[DiscreteTime] =
-    (i to last.i).iterator.map(new DiscreteTime(_))
-}
-object DiscreteTime {
-  def apply(i: Int): DiscreteTime = new DiscreteTime(i)
-
-  implicit val discrete: Discrete[DiscreteTime] = new Discrete[DiscreteTime] {
-    override def succ(x: DiscreteTime): DiscreteTime = x.succ
-    override def pred(x: DiscreteTime): DiscreteTime = x.pred
+    @tailrec def go(previous: Ran): Attempt[Solution] = {
+      policy.makeRun(previous) match {
+        case Success(htime, vals) =>
+          ham.errors.success(new Solution(state, htime, vals.mem))
+        case Failed()             => ham.errors.failure("Failed")
+        case x @ Ran(htime, vals) =>
+          // method was run repeat until we get a success or failure
+          go(x)
+      }
+    }
+    go(base)
   }
-  implicit val order: Order[DiscreteTime] =
-    (x: DiscreteTime, y: DiscreteTime) => Order[Int].compare(x.i, y.i)
-}
-//class ContTime(val t: Int) extends AnyVal
-
-trait HybridTime[D, C] {
-
-  def timesOf(dt: D): cats.collections.Range[C]
-  def discreteTimes(t: C): Set[D]
-  def discreteTimes: cats.collections.Range[D]
-  def continuousTimes: cats.collections.Range[C]
 }

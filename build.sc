@@ -64,7 +64,7 @@ object hydra extends HamModule {
   override def moduleDeps = Seq(core, matrix)
   override def ivyDeps = Agg(cats, catsCollections,  fastparse, spire, rainierCore)
 
-  override def mainClass = Some("hydra.compile.Rainier")
+  override def mainClass = Some("hydra.control.Main")
 
   object tests extends MiniTests
 }

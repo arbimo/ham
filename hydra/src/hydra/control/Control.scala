@@ -66,11 +66,13 @@ object Controller {
     def constraintsToErrors(constraints: List[Expr]): Attempt[List[Compilable]] =
       constraints.traverse(constraintToError(_, schema, env))
 
+    import hydra.algebra._
+    val N = Num[RainierCompiler.ToReal]
+
     def dyn2Error(dyn: Dynamic[Expr]): Compilable = {
       val sv  = dyn.fluent
       val rhs = RainierCompiler.toReal(env.definitionOf(_).toOption)(dyn.value)
-      import hydra.algebra._
-      val N = Num[RainierCompiler.ToReal]
+
       val lhs = N.div(
         N.minus(RainierCompiler.svInNextState(sv), RainierCompiler.svInCurrentState(sv)),
         RainierCompiler.dt)
@@ -87,10 +89,6 @@ object Controller {
     } yield {
       new Problem(schema, List(startBand, middleBand, endBand))
     }
-
-    // todo: remove when finalized
-//    pb.foreach(_.solveLinear)
-    pb.foreach(_.solve)
     pb
   }
 
