@@ -13,6 +13,11 @@ sealed abstract class Attempt[+A] {
     case x: Attempt.Fail => x
   }
 
+  def flatMap[B](f: A => Attempt[B]): Attempt[B] = this match {
+    case Attempt.Succ(a) => f(a)
+    case x: Attempt.Fail => x
+  }
+
   def foreach(f: A => Unit): Unit = this match {
     case Attempt.Succ(a) => f(a)
     case _               =>
@@ -79,10 +84,7 @@ object Attempt {
   implicit val monadError: Monad[Attempt] = new MonadError[Attempt, Err] with Traverse[Attempt] {
     override def pure[A](x: A): Attempt[A] = Attempt.Succ(x)
 
-    override def flatMap[A, B](fa: Attempt[A])(f: A => Attempt[B]): Attempt[B] = fa match {
-      case Succ(v) => f(v)
-      case x: Fail => x
-    }
+    override def flatMap[A, B](fa: Attempt[A])(f: A => Attempt[B]): Attempt[B] = fa.flatMap(f)
 
     @tailrec override def tailRecM[A, B](a: A)(f: A => Attempt[Either[A, B]]): Attempt[B] =
       f(a) match {
