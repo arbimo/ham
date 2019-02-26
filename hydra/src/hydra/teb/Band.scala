@@ -147,7 +147,10 @@ class Problem(state: State, bands: Seq[Band]) { problem =>
         val constraints = this.constraintsWithTime(htime)
         val ls          = new LeastSquares(constraints, curr.length, writer)
 
-        val stats = ls.lmIteration(incumbent, 20)
+        val stats = ls.lmIteration(incumbent, 50)
+//        println(s"$prevN -- $desiredN")
+//        println(stats)
+//        println((new Solution(state, htime, incumbent)).format())
         Ran(htime, incumbent)
       }
     }

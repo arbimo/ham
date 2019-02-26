@@ -6,7 +6,7 @@ constant g: Real = 9.89;
 constant ISP: Real = 311;
 constant max_q: Real = 50;
 
-constant d_final: Real = 300;
+constant d_final: Real = 500;
 
 fluent M: Real;
 fluent d: Real;
@@ -35,6 +35,7 @@ initially {
 
 finally {
   d >= d_final - d_margin;
+  v == 0;
 }
 
 
