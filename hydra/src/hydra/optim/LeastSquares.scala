@@ -104,7 +104,6 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
                    val errorLimit: Double,
                    mem: RWMemory,
                    verbose: Boolean = false) {
-    def println(str: String): Unit = if(verbose) scala.Predef.println(str)
 
     def this(mem: RWMemory) = this(tau = 0.00001, goodUpdate = 0.5, errorLimit = 1e-12, mem)
 
@@ -124,9 +123,9 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
 
     def next(): Unit = {
       numIters += 1
-      println(s"\n----- New iteration $numIters -----")
+//      println(s"\n----- New iteration $numIters -----")
       val residuals = evalResiduals(mem).toArray
-      println("Residuals: " + residuals.mkString(" "))
+//      println("Residuals: " + residuals.mkString(" "))
       lastGood = mem.clone()
       lastChi = residuals.iterator.map(x => x * x).sum
       maxResidual = residuals.iterator.map(math.abs).max
@@ -160,22 +159,22 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
       val newChi       = newResiduals.map(x => x * x).sum
       val improvement  = lastChi - newChi
 
-      println(s"Update: ${update.mkString("\t")}")
-      println(s"New residuals: ${newResiduals.mkString("\t")}")
+//      println(s"Update: ${update.mkString("\t")}")
+//      println(s"New residuals: ${newResiduals.mkString("\t")}")
 
       if(finite(improvement) && improvement > 0) {
         lambda *= goodUpdate
         ni = 2
         lastGood = mem.clone() //.dump
         Stats.numSuccess += 1
-        println(s"Improvement: $lastChi -->  $newChi       -- lambda: $lambda")
+//        println(s"Improvement: $lastChi -->  $newChi       -- lambda: $lambda")
       } else {
         lambda *= ni
         ni *= 2
         for(i <- lastGood.indices) mem(i) = lastGood(i)
 //        mem.load(lastGood)
         Stats.numFailed += 1
-        println(s"Deterioration: $lastChi -> $newChi       -- lambda:  $lambda")
+//        println(s"Deterioration: $lastChi -> $newChi       -- lambda:  $lambda")
       }
     }
 
