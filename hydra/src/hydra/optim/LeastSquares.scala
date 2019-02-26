@@ -66,7 +66,7 @@ class LeastSquares(allResiduals: Seq[DiffFun], dim: Int) {
 
     val sol = update.zipWithIndex
       .map { case (x, i) => zeroMem(i) + (if(x.isNaN) 0 else x) }
-    println("\nSol: "); Matrix.fromArray(sol).print()
+//    println("\nSol: "); Matrix.fromArray(sol).print()
     sol
 
 //    zeroMem.load(sol)
