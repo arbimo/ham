@@ -18,7 +18,7 @@ object deps {
   val fastparse = ivy"com.lihaoyi::fastparse:2.1.0"
   val caseApp = ivy"com.github.alexarchambault::case-app:2.0.0-M3"
   val spire = ivy"org.typelevel::spire:0.16.0"
-  val rainierCore = ivy"com.stripe::rainier-core:0.2.1"
+  val rainierCore = ivy"com.stripe::rainier-core:0.2.2"
 
   val minitest = ivy"io.monix::minitest:2.3.2"
   val minitestLaws = ivy"io.monix::minitest-laws:2.3.2"
